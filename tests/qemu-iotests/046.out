@@ -89,6 +89,14 @@ qemu-io> wrote 8192/8192 bytes at offset XXX
 8 KiB, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
 wrote 57344/57344 bytes at offset XXX
 56 KiB, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+qemu-io> qemu-io> blkdebug: Suspended request 'A'
+qemu-io> qemu-io> qemu-io> blkdebug: Suspended request 'B'
+qemu-io> qemu-io> blkdebug: Resuming request 'A'
+qemu-io> blkdebug: Resuming request 'B'
+qemu-io> wrote 65536/65536 bytes at offset XXX
+64 KiB, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+wrote 8192/8192 bytes at offset XXX
+8 KiB, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
 qemu-io> 
 == Verify image content ==
 qemu-io> read 65536/65536 bytes at offset 0
@@ -159,5 +167,13 @@ qemu-io> read 57344/57344 bytes at offset 696320
 56 KiB, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
 qemu-io> read 32768/32768 bytes at offset 753664
 32 KiB, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+qemu-io> read 49152/49152 bytes at offset 786432
+48 KiB, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+qemu-io> read 65536/65536 bytes at offset 835584
+64 KiB, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+qemu-io> read 8192/8192 bytes at offset 901120
+8 KiB, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+qemu-io> read 8192/8192 bytes at offset 909312
+8 KiB, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
 qemu-io> No errors were found on the image.
 *** done
