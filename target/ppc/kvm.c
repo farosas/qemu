@@ -61,6 +61,7 @@
 #endif
 
 #define PROC_DEVTREE_CPU      "/proc/device-tree/cpus/"
+#define TRACE_HANDLER_ADDR    0xc000000000004d00
 
 const KVMCapabilityInfo kvm_arch_required_capabilities[] = {
     KVM_CAP_LAST_INFO
@@ -1551,6 +1552,28 @@ void kvm_arch_remove_all_hw_breakpoints(void)
     nb_hw_breakpoint = nb_hw_watchpoint = 0;
 }
 
+void kvm_arch_set_singlestep(CPUState *cs, int enabled)
+{
+    PowerPCCPU *cpu = POWERPC_CPU(cs);
+    CPUPPCState *env = &cpu->env;
+
+    if (kvmppc_is_pr(kvm_state)) {
+            return;
+    }
+
+    if (enabled) {
+        /* MSR_SE = 1 will cause a Trace Interrupt in the guest after
+         * the next instruction executes. */
+        env->msr = env->msr | (1ULL << MSR_SE);
+
+        /* We set a breakpoint at the interrupt handler address so
+         * that the singlestep will be seen by KVM (this is treated by
+         * KVM like an ordinary breakpoint) and control is returned to
+         * QEMU. */
+        kvm_insert_breakpoint(cs, TRACE_HANDLER_ADDR, 4, GDB_BREAKPOINT_SW);
+    }
+}
+
 void kvm_arch_update_guest_debug(CPUState *cs, struct kvm_guest_debug *dbg)
 {
     int n;
@@ -1590,6 +1613,41 @@ void kvm_arch_update_guest_debug(CPUState *cs, struct kvm_guest_debug *dbg)
     }
 }
 
+static int kvm_handle_singlestep(CPUState *cs, struct kvm_debug_exit_arch *arch_info)
+{
+    PowerPCCPU *cpu = POWERPC_CPU(cs);
+    CPUPPCState *env = &cpu->env;
+    target_ulong msr = env->msr;
+    uint32_t insn;
+    int ret = 1;
+    int reg;
+
+    if (kvmppc_is_pr(kvm_state)) {
+        return ret;
+    }
+
+    if (arch_info->address == TRACE_HANDLER_ADDR) {
+        kvm_remove_breakpoint(cs, TRACE_HANDLER_ADDR, 4, GDB_BREAKPOINT_SW);
+
+        cpu_memory_rw_debug(cs, env->spr[SPR_SRR0] - 4, (uint8_t *)&insn,
+                            sizeof(insn), 0);
+
+        /* If the last instruction was a mfmsr, make sure that the
+         * MSR_SE bit is not set to avoid the guest kernel knowing
+         * that it is being single-stepped */
+        if (((insn >> 26) & 0x3f) == 31 && ((insn >> 1) & 0x3ff) == 83) {
+            reg = (insn >> 21) & 0x1f;
+            env->gpr[reg] &= ~(1ULL << MSR_SE);
+        }
+
+        env->nip = env->spr[SPR_SRR0];
+        env->msr = msr & ~(1ULL << MSR_SE);
+        cpu_synchronize_state(cs);
+    }
+
+    return ret;
+}
+
 static int kvm_handle_debug(PowerPCCPU *cpu, struct kvm_run *run)
 {
     CPUState *cs = CPU(cpu);
@@ -1600,7 +1658,7 @@ static int kvm_handle_debug(PowerPCCPU *cpu, struct kvm_run *run)
     int flag = 0;
 
     if (cs->singlestep_enabled) {
-        handle = 1;
+        handle = kvm_handle_singlestep(cs, arch_info);
     } else if (arch_info->status) {
         if (nb_hw_breakpoint + nb_hw_watchpoint > 0) {
             if (arch_info->status & KVMPPC_DEBUG_BREAKPOINT) {
