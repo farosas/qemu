@@ -1157,6 +1157,11 @@ struct CPUPPCState {
     uint32_t tm_vscr;
     uint64_t tm_dscr;
     uint64_t tm_tar;
+
+    /* Used for software single step */
+    target_ulong sstep_msr;
+    target_ulong sstep_srr0;
+    target_ulong sstep_srr1;
 };
 
 #define SET_FIT_PERIOD(a_, b_, c_, d_)          \
@@ -1256,6 +1261,7 @@ struct PPCVirtualHypervisorClass {
     OBJECT_GET_CLASS(PPCVirtualHypervisorClass, (obj), \
                      TYPE_PPC_VIRTUAL_HYPERVISOR)
 
+target_ulong ppc_get_trace_int_handler_addr(CPUState *cs);
 void ppc_cpu_do_interrupt(CPUState *cpu);
 bool ppc_cpu_exec_interrupt(CPUState *cpu, int int_req);
 void ppc_cpu_dump_state(CPUState *cpu, FILE *f, fprintf_function cpu_fprintf,
