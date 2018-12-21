@@ -746,6 +746,21 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp_model, int excp)
     check_tlb_flush(env, false);
 }
 
+target_ulong ppc_get_interrupt_handler_addr(CPUState *cs, int excp)
+{
+    PowerPCCPU *cpu = POWERPC_CPU(cs);
+    CPUPPCState *env = &cpu->env;
+    int ail;
+
+    if (excp > POWERPC_EXCP_NONE && excp < POWERPC_EXCP_NB) {
+        ail = (env->spr[SPR_LPCR] & LPCR_AIL) >> LPCR_AIL_SHIFT;
+        return env->excp_vectors[excp] | ppc_excp_vector_offset(cs, ail);
+    }
+
+    cpu_abort(cs, "Invalid exception number %d\n", excp);
+}
+
+
 void ppc_cpu_do_interrupt(CPUState *cs)
 {
     PowerPCCPU *cpu = POWERPC_CPU(cs);
