@@ -1248,6 +1248,26 @@ struct CPUArchState {
      * running cycles.
      */
     uint64_t pmu_base_time;
+    /* Used for software single step */
+    target_ulong sstep_srr0;
+    target_ulong sstep_srr1;
+    target_ulong sstep_insn;
+    target_ulong trace_handler_addr;
+    int sstep_kind;
+/*
+ * SSTEP_REGULAR: A single step that stops at the next
+ * instruction. Most steps are of this kind.
+ *
+ * SSTEP_PENDING: A single step that would stop at the next
+ * instruction but was left pending because an interrupt happened and
+ * while handling it a breakpoint occurred.
+ *
+ * SSTEP_GUEST: A single step that happens while the guest is also
+ * single stepping (has MSR_SE=1 already set).
+ */
+#define SSTEP_REGULAR 0
+#define SSTEP_PENDING 1
+#define SSTEP_GUEST   2
 };
 
 #define SET_FIT_PERIOD(a_, b_, c_, d_)          \
@@ -1343,6 +1363,7 @@ static inline bool vhyp_cpu_in_nested(PowerPCCPU *cpu)
 }
 #endif /* CONFIG_USER_ONLY */
 
+target_ulong ppc_get_trace_int_handler_addr(CPUState *cs, bool mmu_on);
 void ppc_cpu_dump_state(CPUState *cpu, FILE *f, int flags);
 hwaddr ppc_cpu_get_phys_page_debug(CPUState *cpu, vaddr addr);
 int ppc_cpu_gdb_read_register(CPUState *cpu, GByteArray *buf, int reg);
@@ -2299,6 +2320,12 @@ enum {
                         PPC2_ISA300 | PPC2_ISA310 | PPC2_MEM_LWSYNC | \
                         PPC2_BCDA_ISA206)
 };
+
+#define OP_RFID 19
+#define XOP_RFID 18
+#define OP_MOV 31
+#define XOP_MFMSR 83
+#define XOP_MTSPR 467
 
 /*****************************************************************************/
 /*
