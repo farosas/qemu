@@ -84,6 +84,7 @@ bool kvmppc_hpt_needs_host_contiguous_pages(void);
 void kvm_check_mmu(PowerPCCPU *cpu, Error **errp);
 void kvmppc_set_reg_ppc_online(PowerPCCPU *cpu, unsigned int online);
 void kvmppc_set_reg_tb_offset(PowerPCCPU *cpu, int64_t tb_offset);
+void kvm_singlestep_ail_change(CPUState *cs);
 
 int kvm_handle_nmi(PowerPCCPU *cpu, struct kvm_run *run);
 
@@ -228,6 +229,10 @@ static inline void kvmppc_set_reg_ppc_online(PowerPCCPU *cpu,
 }
 
 static inline void kvmppc_set_reg_tb_offset(PowerPCCPU *cpu, int64_t tb_offset)
+{
+}
+
+static inline void kvm_singlestep_ail_change(CPUState *cs)
 {
 }
 
