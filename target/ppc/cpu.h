@@ -1138,6 +1138,27 @@ struct CPUPPCState {
     uint32_t tm_vscr;
     uint64_t tm_dscr;
     uint64_t tm_tar;
+
+    /* Used for software single step */
+    target_ulong sstep_srr0;
+    target_ulong sstep_srr1;
+    target_ulong sstep_insn;
+    target_ulong trace_handler_addr;
+    int sstep_kind;
+/*
+ * SSTEP_REGULAR: A single step that stops at the next
+ * instruction. Most steps are of this kind.
+ *
+ * SSTEP_PENDING: A single step that would stop at the next
+ * instruction but was left pending because an interrupt happened and
+ * while handling it a breakpoint occurred.
+ *
+ * SSTEP_GUEST: A single step that happens while the guest is also
+ * single stepping (has MSR_SE=1 already set).
+ */
+#define SSTEP_REGULAR 0
+#define SSTEP_PENDING 1
+#define SSTEP_GUEST   2
 };
 
 #define SET_FIT_PERIOD(a_, b_, c_, d_)          \
@@ -1231,6 +1252,7 @@ struct PPCVirtualHypervisorClass {
     OBJECT_GET_CLASS(PPCVirtualHypervisorClass, (obj), \
                      TYPE_PPC_VIRTUAL_HYPERVISOR)
 
+target_ulong ppc_get_trace_int_handler_addr(CPUState *cs, bool mmu_on);
 void ppc_cpu_do_interrupt(CPUState *cpu);
 bool ppc_cpu_exec_interrupt(CPUState *cpu, int int_req);
 void ppc_cpu_dump_state(CPUState *cpu, FILE *f, int flags);
@@ -2201,6 +2223,12 @@ enum {
                         PPC2_FP_CVT_S64 | PPC2_TM | PPC2_PM_ISA206 | \
                         PPC2_ISA300)
 };
+
+#define OP_RFID 19
+#define XOP_RFID 18
+#define OP_MOV 31
+#define XOP_MFMSR 83
+#define XOP_MTSPR 467
 
 /*****************************************************************************/
 /*
