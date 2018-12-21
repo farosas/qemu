@@ -253,6 +253,8 @@ int kvm_has_intx_set_mask(void);
  */
 bool kvm_arm_supports_user_irq(void);
 
+bool kvm_arch_can_singlestep(CPUState *cs);
+void kvm_arch_emulate_singlestep(CPUState *cpu, int enabled);
 
 int kvm_on_sigbus_vcpu(CPUState *cpu, int code, void *addr);
 int kvm_on_sigbus(int code, void *addr);
@@ -268,6 +270,7 @@ int kvm_remove_breakpoint(CPUState *cpu, target_ulong addr,
                           target_ulong len, int type);
 void kvm_remove_all_breakpoints(CPUState *cpu);
 int kvm_update_guest_debug(CPUState *cpu, unsigned long reinject_trap);
+void kvm_set_singlestep(CPUState *cs, int enabled);
 
 /* internal API */
 
