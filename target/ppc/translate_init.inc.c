@@ -40,7 +40,7 @@
 #include "fpu/softfloat.h"
 
 //#define PPC_DUMP_CPU
-//#define PPC_DEBUG_SPR
+#define PPC_DEBUG_SPR
 //#define PPC_DUMP_SPR_ACCESSES
 /* #define USE_APPLE_GDB */
 
@@ -9483,6 +9483,20 @@ static bool avr_need_swap(CPUPPCState *env)
 #endif
 }
 
+static int gdb_get_spr_reg(CPUPPCState *env, uint8_t *mem_buf, int n)
+{
+    stfq_p(mem_buf, env->spr[n]);
+    ppc_maybe_bswap_register(env, mem_buf, 8);
+    return 8;
+}
+
+static int gdb_set_spr_reg(CPUPPCState *env, uint8_t *mem_buf, int n)
+{
+    ppc_maybe_bswap_register(env, mem_buf, 8);
+    env->spr[n] = ldfq_p(mem_buf);
+    return 8;
+}
+
 static int gdb_get_float_reg(CPUPPCState *env, uint8_t *mem_buf, int n)
 {
     if (n < 32) {
@@ -9710,7 +9724,8 @@ static void ppc_cpu_realize(DeviceState *dev, Error **errp)
         gdb_register_coprocessor(cs, gdb_get_vsx_reg, gdb_set_vsx_reg,
                                  32, "power-vsx.xml", 0);
     }
-
+    gdb_register_coprocessor(cs, gdb_get_spr_reg, gdb_set_spr_reg, 0,
+                             "power-spr.xml", 0);
     qemu_init_vcpu(cs);
 
     pcc->parent_realize(dev, errp);
@@ -10473,7 +10488,7 @@ static void ppc_cpu_class_init(ObjectClass *oc, void *data)
 #endif
 
     cc->gdb_num_core_regs = 71;
-
+    cc->gdb_get_dynamic_xml = ppc_gdb_get_dynamic_xml;
 #ifdef USE_APPLE_GDB
     cc->gdb_read_register = ppc_cpu_gdb_read_register_apple;
     cc->gdb_write_register = ppc_cpu_gdb_write_register_apple;
@@ -10493,7 +10508,7 @@ static void ppc_cpu_class_init(ObjectClass *oc, void *data)
     cc->tcg_initialize = ppc_translate_init;
 #endif
     cc->disas_set_info = ppc_disas_set_info;
- 
+
     dc->fw_name = "PowerPC,UNKNOWN";
 }
 

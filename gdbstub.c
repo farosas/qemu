@@ -287,12 +287,18 @@ static int gdb_signal_to_target (int sig)
         return -1;
 }
 
+typedef struct GDBFeatureXML {
+    const char *name;
+    const char *body;
+    uint32_t *idx_map;
+} GDBFeatureXML;
+
 typedef struct GDBRegisterState {
     int base_reg;
     int num_regs;
     gdb_reg_cb get_reg;
     gdb_reg_cb set_reg;
-    const char *xml;
+    GDBFeatureXML xml;
     struct GDBRegisterState *next;
 } GDBRegisterState;
 
@@ -631,26 +637,36 @@ static int memtox(char *buf, const char *mem, int len)
     return p - buf;
 }
 
+const char *gdb_get_builtin_xml(const char *xml_name, int len)
+{
+    const char *name;
+    int i;
+
+    for (i = 0; ; i++) {
+        name = xml_builtin[i][0];
+        if (name && strncmp(name, xml_name, len) == 0) {
+            return xml_builtin[i][1];
+        }
+    }
+    return NULL;
+}
+
 static const char *get_feature_xml(const char *p, const char **newp,
                                    CPUClass *cc)
 {
     size_t len;
-    int i;
-    const char *name;
     static char target_xml[1024];
+    GDBRegisterState *r;
+    CPUState *cpu = first_cpu;
 
     len = 0;
     while (p[len] && p[len] != ':')
         len++;
     *newp = p + len;
 
-    name = NULL;
     if (strncmp(p, "target.xml", len) == 0) {
         /* Generate the XML description for this CPU.  */
         if (!target_xml[0]) {
-            GDBRegisterState *r;
-            CPUState *cpu = first_cpu;
-
             pstrcat(target_xml, sizeof(target_xml),
                     "<?xml version=\"1.0\"?>"
                     "<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
@@ -667,29 +683,21 @@ static const char *get_feature_xml(const char *p, const char **newp,
             pstrcat(target_xml, sizeof(target_xml), "\"/>");
             for (r = cpu->gdb_regs; r; r = r->next) {
                 pstrcat(target_xml, sizeof(target_xml), "<xi:include href=\"");
-                pstrcat(target_xml, sizeof(target_xml), r->xml);
+                pstrcat(target_xml, sizeof(target_xml), r->xml.name);
                 pstrcat(target_xml, sizeof(target_xml), "\"/>");
             }
             pstrcat(target_xml, sizeof(target_xml), "</target>");
         }
         return target_xml;
     }
-    if (cc->gdb_get_dynamic_xml) {
-        CPUState *cpu = first_cpu;
-        char *xmlname = g_strndup(p, len);
-        const char *xml = cc->gdb_get_dynamic_xml(cpu, xmlname);
 
-        g_free(xmlname);
-        if (xml) {
-            return xml;
+    for (r = cpu->gdb_regs; r; r = r->next) {
+        if (strncmp(r->xml.name, p, len) == 0 && strlen(r->xml.name) == len) {
+            return r->xml.body;
         }
     }
-    for (i = 0; ; i++) {
-        name = xml_builtin[i][0];
-        if (!name || (strncmp(name, p, len) == 0 && strlen(name) == len))
-            break;
-    }
-    return name ? xml_builtin[i][1] : NULL;
+
+    return gdb_get_builtin_xml(p, len);
 }
 
 static int gdb_read_register(CPUState *cpu, uint8_t *mem_buf, int reg)
@@ -704,7 +712,11 @@ static int gdb_read_register(CPUState *cpu, uint8_t *mem_buf, int reg)
 
     for (r = cpu->gdb_regs; r; r = r->next) {
         if (r->base_reg <= reg && reg < r->base_reg + r->num_regs) {
-            return r->get_reg(env, mem_buf, reg - r->base_reg);
+            reg = reg - r->base_reg;
+            if (r->xml.idx_map) {
+                reg = r->xml.idx_map[reg];
+            }
+            return r->get_reg(env, mem_buf, reg);
         }
     }
     return 0;
@@ -736,33 +748,48 @@ static int gdb_write_register(CPUState *cpu, uint8_t *mem_buf, int reg)
 
 void gdb_register_coprocessor(CPUState *cpu,
                               gdb_reg_cb get_reg, gdb_reg_cb set_reg,
-                              int num_regs, const char *xml, int g_pos)
+                              int num_regs, const char *xml_name, int g_pos)
 {
     GDBRegisterState *s;
     GDBRegisterState **p;
+    GDBFeatureXML *xml;
+    CPUClass *cc = CPU_GET_CLASS(cpu);
 
     p = &cpu->gdb_regs;
     while (*p) {
         /* Check for duplicates.  */
-        if (strcmp((*p)->xml, xml) == 0)
+        if (strcmp((*p)->xml.name, xml_name) == 0)
             return;
         p = &(*p)->next;
     }
 
     s = g_new0(GDBRegisterState, 1);
     s->base_reg = cpu->gdb_num_regs;
-    s->num_regs = num_regs;
     s->get_reg = get_reg;
     s->set_reg = set_reg;
-    s->xml = xml;
+
+    xml = g_new0(GDBFeatureXML, 1);
+    xml->name = xml_name;
+
+    if (cc->gdb_get_dynamic_xml) {
+        s->num_regs = cc->gdb_get_dynamic_xml(cpu, xml->name, &xml->body,
+                                              &xml->idx_map);
+    }
+
+    if (!xml->body) {
+        s->num_regs = num_regs;
+        xml->body = gdb_get_builtin_xml(xml->name, strlen(xml->name));
+    }
+
+    s->xml = *xml;
 
     /* Add to end of list.  */
-    cpu->gdb_num_regs += num_regs;
+    cpu->gdb_num_regs += s->num_regs;
     *p = s;
     if (g_pos) {
         if (g_pos != s->base_reg) {
             error_report("Error: Bad gdb register numbering for '%s', "
-                         "expected %d got %d", xml, g_pos, s->base_reg);
+                         "expected %d got %d", xml_name, g_pos, s->base_reg);
         } else {
             cpu->gdb_num_g_regs = cpu->gdb_num_regs;
         }
