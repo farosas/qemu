@@ -1274,6 +1274,28 @@ int ppc_cpu_gdb_read_register(CPUState *cpu, uint8_t *buf, int reg);
 int ppc_cpu_gdb_read_register_apple(CPUState *cpu, uint8_t *buf, int reg);
 int ppc_cpu_gdb_write_register(CPUState *cpu, uint8_t *buf, int reg);
 int ppc_cpu_gdb_write_register_apple(CPUState *cpu, uint8_t *buf, int reg);
+uint32_t ppc_gdb_read_insn(CPUState *cs, target_ulong addr);
+
+static inline int ppc_gdb_get_op(uint32_t insn)
+{
+    return insn >> 26;
+}
+
+static inline int ppc_gdb_get_xop(uint32_t insn)
+{
+    return (insn >> 1) & 0x3ff;
+}
+
+static inline int ppc_gdb_get_spr(uint32_t insn)
+{
+    return ((insn >> 16) & 0x1f) | ((insn >> 6) & 0x3e0);
+}
+
+static inline int ppc_gdb_get_rt(uint32_t insn)
+{
+    return (insn >> 21) & 0x1f;
+}
+
 #ifndef CONFIG_USER_ONLY
 void ppc_gdb_gen_spr_xml(PowerPCCPU *cpu);
 const char *ppc_gdb_get_dynamic_xml(CPUState *cs, const char *xml_name);
@@ -2223,6 +2245,10 @@ enum {
                         PPC2_FP_CVT_S64 | PPC2_TM | PPC2_PM_ISA206 | \
                         PPC2_ISA300)
 };
+
+#define XOP_RFID 18
+#define XOP_MFMSR 83
+#define XOP_MTSPR 467
 
 /*****************************************************************************/
 /* Memory access type :

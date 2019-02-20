@@ -380,3 +380,18 @@ const char *ppc_gdb_get_dynamic_xml(CPUState *cs, const char *xml_name)
     return NULL;
 }
 #endif
+
+uint32_t ppc_gdb_read_insn(CPUState *cs, target_ulong addr)
+{
+    PowerPCCPU *cpu = POWERPC_CPU(cs);
+    CPUPPCState *env = &cpu->env;
+    uint32_t insn;
+
+    cpu_memory_rw_debug(cs, addr, (uint8_t *)&insn, sizeof(insn), 0);
+
+    if (msr_le) {
+        return ldl_le_p((uint32_t *)&insn);
+    } else {
+        return ldl_be_p((uint32_t *)&insn);
+    }
+}

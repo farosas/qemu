@@ -1587,7 +1587,7 @@ void kvm_arch_set_singlestep(CPUState *cs, int enabled)
     env->sstep_srr0 = env->spr[SPR_SRR0];
     env->sstep_srr1 = env->spr[SPR_SRR1];
 
-    cpu_memory_rw_debug(cs, env->nip, (uint8_t *)&insn, sizeof(insn), 0);
+    insn = ppc_gdb_read_insn(cs, env->nip);
 
     /*
      * rfid overwrites MSR with SRR1. Check if it has the SE bit
@@ -1595,7 +1595,7 @@ void kvm_arch_set_singlestep(CPUState *cs, int enabled)
      * itself and set the SRR1_SE bit instead of MSR_SE to trigger
      * our own single step.
      */
-    if (extract32(insn, 26, 6) == 19 && extract32(insn, 1, 10) == 18) {
+    if (ppc_gdb_get_op(insn) == 19 && ppc_gdb_get_xop(insn) == XOP_RFID) {
         if ((env->spr[SPR_SRR1] >> MSR_SE) & 1) {
             env->sstep_msr |= (1ULL << MSR_SE);
         }
@@ -1676,33 +1676,30 @@ static void restore_singlestep_env(CPUState *cs)
     uint32_t insn;
     int reg;
     int spr;
-    int opcode;
 
-    cpu_memory_rw_debug(cs, env->spr[SPR_SRR0] - 4, (uint8_t *)&insn,
-                        sizeof(insn), 0);
+    insn = ppc_gdb_read_insn(cs, env->spr[SPR_SRR0] - 4);
 
     env->spr[SPR_SRR0] = env->sstep_srr0;
     env->spr[SPR_SRR1] = env->sstep_srr1;
 
-    if (extract32(insn, 26, 6) != 31) {
+    if (ppc_gdb_get_op(insn) != 31) {
         return;
     }
 
-    opcode = extract32(insn, 1, 10);
-    reg = extract32(insn, 21, 5);
+    reg = ppc_gdb_get_rt(insn);
 
-    switch (opcode) {
-    case 467:
+    switch (ppc_gdb_get_xop(insn)) {
+    case XOP_MTSPR:
         /*
          * mtspr: the guest altered the SRR, so do not use the
          *        pre-step value.
          */
-        spr = ((insn >> 16) & 0x1f) | ((insn >> 6) & 0x3e0);
+        spr = ppc_gdb_get_spr(insn);
         if (spr == SPR_SRR0 || spr == SPR_SRR1) {
             env->spr[spr] = env->gpr[reg];
         }
         break;
-    case 83:
+    case XOP_MFMSR:
         /*
          * mfmsr: clear MSR_SE bit to avoid the guest knowing
          *         that it is being single-stepped.
@@ -1816,7 +1813,7 @@ static int kvm_handle_debug(PowerPCCPU *cpu, struct kvm_run *run)
     struct kvm_debug_exit_arch *arch_info = &run->debug.arch;
 
     if (cs->singlestep_enabled) {
-        return kvm_handle_singlestep(cs, arch_info);
+        return kvm_handle_singlestep(cs, arch_info->address);
     }
 
     if (arch_info->status) {
@@ -1824,7 +1821,7 @@ static int kvm_handle_debug(PowerPCCPU *cpu, struct kvm_run *run)
     }
 
     if (kvm_find_sw_breakpoint(cs, arch_info->address)) {
-        return kvm_handle_sw_breakpoint(cs, arch_info);
+        return kvm_handle_sw_breakpoint(cs, arch_info->address);
     }
 
     /*
