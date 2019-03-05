@@ -2270,8 +2270,7 @@ bool kvm_arm_supports_user_irq(void)
 /* Whether the KVM_SET_GUEST_DEBUG ioctl supports single stepping */
 int kvm_has_guestdbg_singlestep(void)
 {
-    /* return kvm_check_extension(kvm_state, KVM_CAP_GUEST_DEBUG_SSTEP); */
-    return 0;
+    return kvm_check_extension(kvm_state, KVM_CAP_GUEST_DEBUG_SSTEP);
 }
 
 #ifdef KVM_CAP_SET_GUEST_DEBUG
