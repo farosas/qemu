@@ -1301,6 +1301,7 @@ static void lo_opendir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi
 	struct lo_data *lo = lo_data(req);
 	struct lo_dirp *d;
 	ssize_t fh;
+	int fd = -1;
 
 	d = calloc(1, sizeof(struct lo_dirp));
 	if (d == NULL)
@@ -1332,11 +1333,12 @@ static void lo_opendir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi
 out_errno:
 	error = errno;
 out_err:
+	if (fd != -1) {
+		close(fd);
+	}
 	if (d) {
 		if (d->dp)
 			closedir(d->dp);
-		if (fd != -1)
-			close(fd);
 		free(d);
 	}
 	fuse_reply_err(req, error);
