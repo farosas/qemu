@@ -24,6 +24,16 @@
 #include "exec/address-spaces.h"
 #include "trace.h"
 
+/*
+ * The powerpc kernel code expects the memory to be accessible during
+ * addition/removal.
+ */
+#if defined(TARGET_PPC64) && defined(CONFIG_LINUX)
+#define DAX_WINDOW_PROT PROT_READ
+#else
+#define DAX_WINDOW_PROT PROT_NONE
+#endif
+
 uint64_t vhost_user_fs_slave_map(struct vhost_dev *dev, VhostUserFSSlaveMsg *sm,
                                  int fd)
 {
@@ -133,8 +143,8 @@ uint64_t vhost_user_fs_slave_unmap(struct vhost_dev *dev, VhostUserFSSlaveMsg *s
             continue;
         }
 
-        ptr = mmap(cache_host + sm->c_offset[i], sm->len[i],
-                PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+        ptr = mmap(cache_host + sm->c_offset[i], sm->len[i], DAX_WINDOW_PROT,
+                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
         if (ptr != (cache_host + sm->c_offset[i])) {
             res = -errno;
             fprintf(stderr, "%s: mmap failed (%s) [%d] %"
@@ -485,8 +495,9 @@ static void vuf_device_realize(DeviceState *dev, Error **errp)
 
     if (fs->conf.cache_size) {
         /* Anonymous, private memory is not counted as overcommit */
-        cache_ptr = mmap(NULL, fs->conf.cache_size, PROT_NONE,
+        cache_ptr = mmap(NULL, fs->conf.cache_size, DAX_WINDOW_PROT,
                          MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+
         if (cache_ptr == MAP_FAILED) {
             error_setg(errp, "Unable to mmap blank cache");
             return;
