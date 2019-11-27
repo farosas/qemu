@@ -388,16 +388,10 @@ int fuse_reply_entry(fuse_req_t req, const struct fuse_entry_param *e, bool shar
 	char buf[sizeof(struct fuse_entry_out) + sizeof(struct fuse_entryver_out)];
 	struct fuse_entry_out *earg = (struct fuse_entry_out *) buf;
 	struct fuse_entryver_out *ever = (struct fuse_entryver_out *) (buf + sizeof(struct fuse_entry_out));
-	size_t size = req->se->conn.proto_minor < 9 ?
-		FUSE_COMPAT_ENTRY_OUT_SIZE : sizeof(buf);
+	size_t size = sizeof(buf);
 
-	if ((req->se->conn.proto_minor >= 9) && !shared)
+	if (!shared)
 		size -= sizeof(struct fuse_entryver_out);
-
-	/* before ABI 7.4 e->ino == 0 was invalid, only ENOENT meant
-	   negative entry */
-	if (!e->ino && req->se->conn.proto_minor < 4)
-		return fuse_reply_err(req, ENOENT);
 
 	memset(buf, 0, sizeof(buf));
 	fill_entry(earg, e);
@@ -410,8 +404,7 @@ int fuse_reply_create(fuse_req_t req, const struct fuse_entry_param *e,
 		      const struct fuse_file_info *f, bool shared)
 {
 	char buf[sizeof(struct fuse_entry_out) + sizeof(struct fuse_open_out) + sizeof(struct fuse_entryver_out)];
-	size_t entrysize = req->se->conn.proto_minor < 9 ?
-		FUSE_COMPAT_ENTRY_OUT_SIZE : sizeof(struct fuse_entry_out);
+	size_t entrysize = sizeof(struct fuse_entry_out);
 	struct fuse_entry_out *earg = (struct fuse_entry_out *) buf;
 	struct fuse_open_out *oarg = (struct fuse_open_out *) (buf + entrysize);
 	struct fuse_entryver_out *ever = (struct fuse_entryver_out *) (buf + entrysize + sizeof(struct fuse_open_out));
@@ -430,8 +423,7 @@ int fuse_reply_attr(fuse_req_t req, const struct stat *attr,
 		    double attr_timeout)
 {
 	struct fuse_attr_out arg;
-	size_t size = req->se->conn.proto_minor < 9 ?
-		FUSE_COMPAT_ATTR_OUT_SIZE : sizeof(arg);
+	size_t size = sizeof(arg);
 
 	memset(&arg, 0, sizeof(arg));
 	arg.attr_valid = calc_timeout_sec(attr_timeout);
@@ -532,8 +524,7 @@ int fuse_reply_data(fuse_req_t req, struct fuse_bufvec *bufv,
 int fuse_reply_statfs(fuse_req_t req, const struct statvfs *stbuf)
 {
 	struct fuse_statfs_out arg;
-	size_t size = req->se->conn.proto_minor < 4 ?
-		FUSE_COMPAT_STATFS_SIZE : sizeof(arg);
+	size_t size = sizeof(arg);
 
 	memset(&arg, 0, sizeof(arg));
 	convert_statfs(stbuf, &arg.st);
@@ -615,43 +606,29 @@ int fuse_reply_ioctl_retry(fuse_req_t req,
 	iov[count].iov_len = sizeof(arg);
 	count++;
 
-	if (req->se->conn.proto_minor < 16) {
-		if (in_count) {
-			iov[count].iov_base = (void *)in_iov;
-			iov[count].iov_len = sizeof(in_iov[0]) * in_count;
-			count++;
-		}
+	/* Can't handle non-compat 64bit ioctls on 32bit */
+	if (sizeof(void *) == 4 && req->ioctl_64bit) {
+		res = fuse_reply_err(req, EINVAL);
+		goto out;
+	}
 
-		if (out_count) {
-			iov[count].iov_base = (void *)out_iov;
-			iov[count].iov_len = sizeof(out_iov[0]) * out_count;
-			count++;
-		}
-	} else {
-		/* Can't handle non-compat 64bit ioctls on 32bit */
-		if (sizeof(void *) == 4 && req->ioctl_64bit) {
-			res = fuse_reply_err(req, EINVAL);
-			goto out;
-		}
+	if (in_count) {
+		in_fiov = fuse_ioctl_iovec_copy(in_iov, in_count);
+		if (!in_fiov)
+			goto enomem;
 
-		if (in_count) {
-			in_fiov = fuse_ioctl_iovec_copy(in_iov, in_count);
-			if (!in_fiov)
-				goto enomem;
+		iov[count].iov_base = (void *)in_fiov;
+		iov[count].iov_len = sizeof(in_fiov[0]) * in_count;
+		count++;
+	}
+	if (out_count) {
+		out_fiov = fuse_ioctl_iovec_copy(out_iov, out_count);
+		if (!out_fiov)
+			goto enomem;
 
-			iov[count].iov_base = (void *)in_fiov;
-			iov[count].iov_len = sizeof(in_fiov[0]) * in_count;
-			count++;
-		}
-		if (out_count) {
-			out_fiov = fuse_ioctl_iovec_copy(out_iov, out_count);
-			if (!out_fiov)
-				goto enomem;
-
-			iov[count].iov_base = (void *)out_fiov;
-			iov[count].iov_len = sizeof(out_fiov[0]) * out_count;
-			count++;
-		}
+		iov[count].iov_base = (void *)out_fiov;
+		iov[count].iov_len = sizeof(out_fiov[0]) * out_count;
+		count++;
 	}
 
 	res = send_reply_iov(req, 0, iov, count);
@@ -831,20 +808,18 @@ static void do_getattr(fuse_req_t req, fuse_ino_t nodeid,
 	struct fuse_file_info *fip = NULL;
 	struct fuse_file_info fi;
 
-	if (req->se->conn.proto_minor >= 9) {
-		struct fuse_getattr_in *arg;
+	struct fuse_getattr_in *arg;
 
-		arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
-		if (!arg) {
-			fuse_reply_err(req, EINVAL);
-			return;
-		}
+	arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
+	if (!arg) {
+		fuse_reply_err(req, EINVAL);
+		return;
+	}
 
-		if (arg->getattr_flags & FUSE_GETATTR_FH) {
-			memset(&fi, 0, sizeof(fi));
-			fi.fh = arg->fh;
-			fip = &fi;
-		}
+	if (arg->getattr_flags & FUSE_GETATTR_FH) {
+		memset(&fi, 0, sizeof(fi));
+		fi.fh = arg->fh;
+		fip = &fi;
 	}
 
 	if (req->se->op.getattr)
@@ -923,21 +898,17 @@ static void do_readlink(fuse_req_t req, fuse_ino_t nodeid,
 static void do_mknod(fuse_req_t req, fuse_ino_t nodeid,
 		     struct fuse_mbuf_iter *iter)
 {
-	bool compat = req->se->conn.proto_minor < 12;
 	struct fuse_mknod_in *arg;
 	const char *name;
 
-	arg = fuse_mbuf_iter_advance(iter,
-			compat ? FUSE_COMPAT_MKNOD_IN_SIZE : sizeof(*arg));
+	arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
 	name = fuse_mbuf_iter_advance_str(iter);
 	if (!arg || !name) {
 		fuse_reply_err(req, EINVAL);
 		return;
 	}
 
-	if (!compat) {
-		req->ctx.umask = arg->umask;
-	}
+	req->ctx.umask = arg->umask;
 
 	if (req->se->op.mknod)
 		req->se->op.mknod(req, nodeid, name, arg->mode, arg->rdev);
@@ -948,21 +919,17 @@ static void do_mknod(fuse_req_t req, fuse_ino_t nodeid,
 static void do_mkdir(fuse_req_t req, fuse_ino_t nodeid,
 		     struct fuse_mbuf_iter *iter)
 {
-	bool compat = req->se->conn.proto_minor < 12;
 	struct fuse_mkdir_in *arg;
 	const char *name;
 
-	arg = fuse_mbuf_iter_advance(iter,
-			compat ? sizeof(uint32_t) : sizeof(*arg));
+	arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
 	name = fuse_mbuf_iter_advance_str(iter);
 	if (!arg || !name) {
 		fuse_reply_err(req, EINVAL);
 		return;
 	}
 
-	if (!compat) {
-		req->ctx.umask = arg->umask;
-	}
+	req->ctx.umask = arg->umask;
 
 	if (req->se->op.mkdir)
 		req->se->op.mkdir(req, nodeid, name, arg->mode);
@@ -1084,14 +1051,11 @@ static void do_create(fuse_req_t req, fuse_ino_t nodeid,
 		      struct fuse_mbuf_iter *iter)
 {
 	if (req->se->op.create) {
-		bool compat = req->se->conn.proto_minor < 12;
 		struct fuse_create_in *arg;
 		struct fuse_file_info fi;
 		const char *name;
 
-		arg = fuse_mbuf_iter_advance(iter, compat ?
-				sizeof(struct fuse_open_in) :
-				sizeof(*arg));
+		arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
 		name = fuse_mbuf_iter_advance_str(iter);
 		if (!arg || !name) {
 			fuse_reply_err(req, EINVAL);
@@ -1101,9 +1065,7 @@ static void do_create(fuse_req_t req, fuse_ino_t nodeid,
 		memset(&fi, 0, sizeof(fi));
 		fi.flags = arg->flags;
 
-		if (!compat) {
-			req->ctx.umask = arg->umask;
-		}
+		req->ctx.umask = arg->umask;
 
 		req->se->op.create(req, nodeid, name, arg->mode, &fi);
 	} else
@@ -1135,20 +1097,15 @@ static void do_read(fuse_req_t req, fuse_ino_t nodeid,
 		    struct fuse_mbuf_iter *iter)
 {
 	if (req->se->op.read) {
-		bool compat = req->se->conn.proto_minor < 9;
 		struct fuse_read_in *arg;
 		struct fuse_file_info fi;
 
-		arg = fuse_mbuf_iter_advance(iter, compat ?
-				offsetof(struct fuse_read_in, lock_owner) :
-				sizeof(*arg));
+		arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
 
 		memset(&fi, 0, sizeof(fi));
 		fi.fh = arg->fh;
-		if (!compat) {
-			fi.lock_owner = arg->lock_owner;
-			fi.flags = arg->flags;
-		}
+		fi.lock_owner = arg->lock_owner;
+		fi.flags = arg->flags;
 		req->se->op.read(req, nodeid, arg->size, arg->offset, &fi);
 	} else
 		fuse_reply_err(req, ENOSYS);
@@ -1157,13 +1114,11 @@ static void do_read(fuse_req_t req, fuse_ino_t nodeid,
 static void do_write(fuse_req_t req, fuse_ino_t nodeid,
 		     struct fuse_mbuf_iter *iter)
 {
-	bool compat = req->se->conn.proto_minor < 9;
 	struct fuse_write_in *arg;
 	struct fuse_file_info fi;
 	const char *param;
 
-	arg = fuse_mbuf_iter_advance(iter, compat ?
-			FUSE_COMPAT_WRITE_IN_SIZE : sizeof(*arg));
+	arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
 	if (!arg) {
 		fuse_reply_err(req, EINVAL);
 		return;
@@ -1180,10 +1135,8 @@ static void do_write(fuse_req_t req, fuse_ino_t nodeid,
 	fi.writepage = (arg->write_flags & FUSE_WRITE_CACHE) != 0;
 	fi.kill_priv = !!(arg->write_flags & FUSE_WRITE_KILL_PRIV);
 
-	if (!compat) {
-		fi.lock_owner = arg->lock_owner;
-		fi.flags = arg->flags;
-	}
+	fi.lock_owner = arg->lock_owner;
+	fi.flags = arg->flags;
 
 	if (req->se->op.write)
 		req->se->op.write(req, nodeid, param, arg->size,
@@ -1208,21 +1161,14 @@ static void do_write_buf(fuse_req_t req, fuse_ino_t nodeid,
 
 	memset(&fi, 0, sizeof(fi));
 
-	if (se->conn.proto_minor < 9) {
-		arg_size = FUSE_COMPAT_WRITE_IN_SIZE;
-	}
-
 	arg = fuse_mbuf_iter_advance(iter, arg_size);
 	if (!arg) {
 		fuse_reply_err(req, EINVAL);
 		return;
 	}
 
-	/* Only access non-compat fields here! */
-	if (se->conn.proto_minor >= 9) {
-		fi.lock_owner = arg->lock_owner;
-		fi.flags = arg->flags;
-	}
+	fi.lock_owner = arg->lock_owner;
+	fi.flags = arg->flags;
 
 	fi.fh = arg->fh;
 	fi.writepage = !!(arg->write_flags & FUSE_WRITE_CACHE);
@@ -1252,13 +1198,10 @@ static void do_write_buf(fuse_req_t req, fuse_ino_t nodeid,
 static void do_flush(fuse_req_t req, fuse_ino_t nodeid,
 		     struct fuse_mbuf_iter *iter)
 {
-	bool compat = req->se->conn.proto_minor < 7;
 	struct fuse_flush_in *arg;
 	struct fuse_file_info fi;
 
-	arg = fuse_mbuf_iter_advance(iter, compat ?
-			offsetof(struct fuse_flush_in, lock_owner) :
-			sizeof(*arg));
+	arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
 	if (!arg) {
 		fuse_reply_err(req, EINVAL);
 		return;
@@ -1267,9 +1210,7 @@ static void do_flush(fuse_req_t req, fuse_ino_t nodeid,
 	memset(&fi, 0, sizeof(fi));
 	fi.fh = arg->fh;
 	fi.flush = 1;
-	if (!compat) {
-		fi.lock_owner = arg->lock_owner;
-	}
+	fi.lock_owner = arg->lock_owner;
 
 	if (req->se->op.flush)
 		req->se->op.flush(req, nodeid, &fi);
@@ -1280,13 +1221,10 @@ static void do_flush(fuse_req_t req, fuse_ino_t nodeid,
 static void do_release(fuse_req_t req, fuse_ino_t nodeid,
 		       struct fuse_mbuf_iter *iter)
 {
-	bool compat = req->se->conn.proto_minor < 8;
 	struct fuse_release_in *arg;
 	struct fuse_file_info fi;
 
-	arg = fuse_mbuf_iter_advance(iter, compat ?
-			offsetof(struct fuse_release_in, lock_owner) :
-			sizeof(*arg));
+	arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
 	if (!arg) {
 		fuse_reply_err(req, EINVAL);
 		return;
@@ -1295,13 +1233,11 @@ static void do_release(fuse_req_t req, fuse_ino_t nodeid,
 	memset(&fi, 0, sizeof(fi));
 	fi.flags = arg->flags;
 	fi.fh = arg->fh;
-	if (!compat) {
-		fi.flush = (arg->release_flags & FUSE_RELEASE_FLUSH) ? 1 : 0;
-		fi.lock_owner = arg->lock_owner;
+	fi.flush = (arg->release_flags & FUSE_RELEASE_FLUSH) ? 1 : 0;
+	fi.lock_owner = arg->lock_owner;
 
-		if (arg->release_flags & FUSE_RELEASE_FLOCK_UNLOCK) {
-			fi.flock_release = 1;
-		}
+	if (arg->release_flags & FUSE_RELEASE_FLOCK_UNLOCK) {
+		fi.flock_release = 1;
 	}
 
 	if (req->se->op.release)
@@ -1774,8 +1710,7 @@ static void do_ioctl(fuse_req_t req, fuse_ino_t nodeid,
 	memset(&fi, 0, sizeof(fi));
 	fi.fh = arg->fh;
 
-	if (sizeof(void *) == 4 && req->se->conn.proto_minor >= 16 &&
-	    !(flags & FUSE_IOCTL_32BIT)) {
+	if (sizeof(void *) == 4 && !(flags & FUSE_IOCTL_32BIT)) {
 		req->ioctl_64bit = 1;
 	}
 
@@ -2016,7 +1951,7 @@ static void do_init(fuse_req_t req, fuse_ino_t nodeid,
 	outarg.major = FUSE_KERNEL_VERSION;
 	outarg.minor = FUSE_KERNEL_MINOR_VERSION;
 
-	if (arg->major < 7) {
+	if (arg->major < 7 || (arg->major == 7 && arg->minor < 31)) {
 		fuse_log(FUSE_LOG_ERR, "fuse: unsupported protocol version: %u.%u\n",
 			arg->major, arg->minor);
 		fuse_reply_err(req, EPROTO);
@@ -2029,63 +1964,56 @@ static void do_init(fuse_req_t req, fuse_ino_t nodeid,
 		return;
 	}
 
-	if (arg->minor >= 6) {
-		if (arg->max_readahead < se->conn.max_readahead)
-			se->conn.max_readahead = arg->max_readahead;
-		if (arg->flags & FUSE_ASYNC_READ)
-			se->conn.capable |= FUSE_CAP_ASYNC_READ;
-		if (arg->flags & FUSE_POSIX_LOCKS)
-			se->conn.capable |= FUSE_CAP_POSIX_LOCKS;
-		if (arg->flags & FUSE_ATOMIC_O_TRUNC)
-			se->conn.capable |= FUSE_CAP_ATOMIC_O_TRUNC;
-		if (arg->flags & FUSE_EXPORT_SUPPORT)
-			se->conn.capable |= FUSE_CAP_EXPORT_SUPPORT;
-		if (arg->flags & FUSE_DONT_MASK)
-			se->conn.capable |= FUSE_CAP_DONT_MASK;
-		if (arg->flags & FUSE_FLOCK_LOCKS)
-			se->conn.capable |= FUSE_CAP_FLOCK_LOCKS;
-		if (arg->flags & FUSE_AUTO_INVAL_DATA)
-			se->conn.capable |= FUSE_CAP_AUTO_INVAL_DATA;
-		if (arg->flags & FUSE_DO_READDIRPLUS)
-			se->conn.capable |= FUSE_CAP_READDIRPLUS;
-		if (arg->flags & FUSE_READDIRPLUS_AUTO)
-			se->conn.capable |= FUSE_CAP_READDIRPLUS_AUTO;
-		if (arg->flags & FUSE_ASYNC_DIO)
-			se->conn.capable |= FUSE_CAP_ASYNC_DIO;
-		if (arg->flags & FUSE_WRITEBACK_CACHE)
-			se->conn.capable |= FUSE_CAP_WRITEBACK_CACHE;
-		if (arg->flags & FUSE_NO_OPEN_SUPPORT)
-			se->conn.capable |= FUSE_CAP_NO_OPEN_SUPPORT;
-		if (arg->flags & FUSE_PARALLEL_DIROPS)
-			se->conn.capable |= FUSE_CAP_PARALLEL_DIROPS;
-		if (arg->flags & FUSE_POSIX_ACL)
-			se->conn.capable |= FUSE_CAP_POSIX_ACL;
-		if (arg->flags & FUSE_HANDLE_KILLPRIV)
-			se->conn.capable |= FUSE_CAP_HANDLE_KILLPRIV;
-		if (arg->flags & FUSE_NO_OPENDIR_SUPPORT)
-			se->conn.capable |= FUSE_CAP_NO_OPENDIR_SUPPORT;
-		if (!(arg->flags & FUSE_MAX_PAGES)) {
-			size_t max_bufsize =
-				FUSE_DEFAULT_MAX_PAGES_PER_REQ * getpagesize()
-				+ FUSE_BUFFER_HEADER_SIZE;
-			if (bufsize > max_bufsize) {
-				bufsize = max_bufsize;
-			}
+	if (arg->max_readahead < se->conn.max_readahead)
+		se->conn.max_readahead = arg->max_readahead;
+	if (arg->flags & FUSE_ASYNC_READ)
+		se->conn.capable |= FUSE_CAP_ASYNC_READ;
+	if (arg->flags & FUSE_POSIX_LOCKS)
+		se->conn.capable |= FUSE_CAP_POSIX_LOCKS;
+	if (arg->flags & FUSE_ATOMIC_O_TRUNC)
+		se->conn.capable |= FUSE_CAP_ATOMIC_O_TRUNC;
+	if (arg->flags & FUSE_EXPORT_SUPPORT)
+		se->conn.capable |= FUSE_CAP_EXPORT_SUPPORT;
+	if (arg->flags & FUSE_DONT_MASK)
+		se->conn.capable |= FUSE_CAP_DONT_MASK;
+	if (arg->flags & FUSE_FLOCK_LOCKS)
+		se->conn.capable |= FUSE_CAP_FLOCK_LOCKS;
+	if (arg->flags & FUSE_AUTO_INVAL_DATA)
+		se->conn.capable |= FUSE_CAP_AUTO_INVAL_DATA;
+	if (arg->flags & FUSE_DO_READDIRPLUS)
+		se->conn.capable |= FUSE_CAP_READDIRPLUS;
+	if (arg->flags & FUSE_READDIRPLUS_AUTO)
+		se->conn.capable |= FUSE_CAP_READDIRPLUS_AUTO;
+	if (arg->flags & FUSE_ASYNC_DIO)
+		se->conn.capable |= FUSE_CAP_ASYNC_DIO;
+	if (arg->flags & FUSE_WRITEBACK_CACHE)
+		se->conn.capable |= FUSE_CAP_WRITEBACK_CACHE;
+	if (arg->flags & FUSE_NO_OPEN_SUPPORT)
+		se->conn.capable |= FUSE_CAP_NO_OPEN_SUPPORT;
+	if (arg->flags & FUSE_PARALLEL_DIROPS)
+		se->conn.capable |= FUSE_CAP_PARALLEL_DIROPS;
+	if (arg->flags & FUSE_POSIX_ACL)
+		se->conn.capable |= FUSE_CAP_POSIX_ACL;
+	if (arg->flags & FUSE_HANDLE_KILLPRIV)
+		se->conn.capable |= FUSE_CAP_HANDLE_KILLPRIV;
+	if (arg->flags & FUSE_NO_OPENDIR_SUPPORT)
+		se->conn.capable |= FUSE_CAP_NO_OPENDIR_SUPPORT;
+	if (!(arg->flags & FUSE_MAX_PAGES)) {
+		size_t max_bufsize =
+			FUSE_DEFAULT_MAX_PAGES_PER_REQ * getpagesize()
+			+ FUSE_BUFFER_HEADER_SIZE;
+		if (bufsize > max_bufsize) {
+			bufsize = max_bufsize;
 		}
-	} else {
-		se->conn.max_readahead = 0;
 	}
 
-	if (se->conn.proto_minor >= 14) {
 #ifdef HAVE_SPLICE
 #ifdef HAVE_VMSPLICE
-		se->conn.capable |= FUSE_CAP_SPLICE_WRITE | FUSE_CAP_SPLICE_MOVE;
+	se->conn.capable |= FUSE_CAP_SPLICE_WRITE | FUSE_CAP_SPLICE_MOVE;
 #endif
-		se->conn.capable |= FUSE_CAP_SPLICE_READ;
+	se->conn.capable |= FUSE_CAP_SPLICE_READ;
 #endif
-	}
-	if (se->conn.proto_minor >= 18)
-		se->conn.capable |= FUSE_CAP_IOCTL_DIR;
+	se->conn.capable |= FUSE_CAP_IOCTL_DIR;
 
 	/* Default settings for modern filesystems.
 	 *
@@ -2178,21 +2106,18 @@ static void do_init(fuse_req_t req, fuse_ino_t nodeid,
 		outarg.flags |= FUSE_POSIX_ACL;
 	outarg.max_readahead = se->conn.max_readahead;
 	outarg.max_write = se->conn.max_write;
-	if (se->conn.proto_minor >= 13) {
-		if (se->conn.max_background >= (1 << 16))
-			se->conn.max_background = (1 << 16) - 1;
-		if (se->conn.congestion_threshold > se->conn.max_background)
-			se->conn.congestion_threshold = se->conn.max_background;
-		if (!se->conn.congestion_threshold) {
-			se->conn.congestion_threshold =
-				se->conn.max_background * 3 / 4;
-		}
-
-		outarg.max_background = se->conn.max_background;
-		outarg.congestion_threshold = se->conn.congestion_threshold;
+	if (se->conn.max_background >= (1 << 16))
+		se->conn.max_background = (1 << 16) - 1;
+	if (se->conn.congestion_threshold > se->conn.max_background)
+		se->conn.congestion_threshold = se->conn.max_background;
+	if (!se->conn.congestion_threshold) {
+		se->conn.congestion_threshold =
+			se->conn.max_background * 3 / 4;
 	}
-	if (se->conn.proto_minor >= 23)
-		outarg.time_gran = se->conn.time_gran;
+
+	outarg.max_background = se->conn.max_background;
+	outarg.congestion_threshold = se->conn.congestion_threshold;
+	outarg.time_gran = se->conn.time_gran;
 	if (arg->flags & FUSE_MAP_ALIGNMENT) {
 		outarg.flags |= FUSE_MAP_ALIGNMENT;
 
@@ -2213,10 +2138,6 @@ static void do_init(fuse_req_t req, fuse_ino_t nodeid,
 		   outarg.time_gran);
 	fuse_log(FUSE_LOG_DEBUG, "   map_alignment=%u\n",
 		   outarg.map_alignment);
-	if (arg->minor < 5)
-		outargsize = FUSE_COMPAT_INIT_OUT_SIZE;
-	else if (arg->minor < 23)
-		outargsize = FUSE_COMPAT_22_INIT_OUT_SIZE;
 
 	send_reply_ok(req, &outarg, outargsize);
 }
@@ -2283,9 +2204,6 @@ int fuse_lowlevel_notify_inval_inode(struct fuse_session *se, fuse_ino_t ino,
 	if (!se)
 		return -EINVAL;
 
-	if (se->conn.proto_major < 6 || se->conn.proto_minor < 12)
-		return -ENOSYS;
-
 	iov[1].iov_base = &outarg;
 	iov[1].iov_len = sizeof(outarg);
 
@@ -2304,9 +2222,6 @@ int fuse_lowlevel_notify_inval_entry(struct fuse_session *se, fuse_ino_t parent,
 	if (!se)
 		return -EINVAL;
 	
-	if (se->conn.proto_major < 6 || se->conn.proto_minor < 12)
-		return -ENOSYS;
-
 	iov[1].iov_base = &outarg;
 	iov[1].iov_len = sizeof(outarg);
 	iov[2].iov_base = (void *)name;
@@ -2328,9 +2243,6 @@ int fuse_lowlevel_notify_delete(struct fuse_session *se,
 
 	if (!se)
 		return -EINVAL;
-
-	if (se->conn.proto_major < 6 || se->conn.proto_minor < 18)
-		return -ENOSYS;
 
 	iov[1].iov_base = &outarg;
 	iov[1].iov_len = sizeof(outarg);
@@ -2357,9 +2269,6 @@ int fuse_lowlevel_notify_store(struct fuse_session *se, fuse_ino_t ino,
 
 	if (!se)
 		return -EINVAL;
-
-	if (se->conn.proto_major < 6 || se->conn.proto_minor < 15)
-		return -ENOSYS;
 
 	iov[0].iov_base = &out;
 	iov[0].iov_len = sizeof(out);
