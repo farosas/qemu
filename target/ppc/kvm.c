@@ -1543,13 +1543,68 @@ void kvm_arch_remove_all_hw_breakpoints(void)
     nb_hw_breakpoint = nb_hw_watchpoint = 0;
 }
 
+static void kvm_insert_singlestep_breakpoint(CPUState *cs, bool mmu_on)
+{
+    PowerPCCPU *cpu = POWERPC_CPU(cs);
+    CPUPPCState *env = &cpu->env;
+    target_ulong bp_addr;
+
+    bp_addr = ppc_get_trace_int_handler_addr(cs, mmu_on);
+    if (env->nip == bp_addr) {
+        /*
+         * We are trying to step over the interrupt handler
+         * address itself; move the breakpoint to the next
+         * instruction.
+         */
+        bp_addr += 4;
+    }
+
+    kvm_insert_breakpoint(cs, bp_addr, 4, GDB_BREAKPOINT_SW);
+    env->trace_handler_addr = bp_addr;
+}
+
+/*
+ * The emulated singlestep works by triggering a Trace Interrupt
+ * inside the guest by setting its MSR_SE bit.  When the guest
+ * executes the instruction, the Trace Interrupt triggers and the step
+ * is done. We then need to hide the fact that the interrupt ever
+ * happened before returning into the guest.
+ *
+ * Since the Trace Interrupt does not set MSR_HV (the whole point of
+ * having to emulate the step), we set a breakpoint at the interrupt
+ * handler address (0xd00) so that it reaches KVM (this is treated by
+ * KVM like an ordinary breakpoint) and control is returned to QEMU.
+ *
+ * There are things to consider before the step (this function):
+ *
+ * - The breakpoint location depends on where the interrupt vectors are,
+ *   which in turn depends on the LPCR_AIL and MSR_IR|DR bits;
+ *
+ * - If the stepped instruction changes the LPCR_AI, the breakpoint
+ *   location needs to be updated mid-step;
+ *
+ * - If the stepped instruction is rfid, the MSR bits after the step
+ *   will come from SRR1.
+ *
+ *
+ * There are some fixups needed after the step before returning to the
+ * guest (kvm_handle_singlestep):
+ *
+ * - The interrupt will set SRR0 and SRR1, so we need to restore them
+ *   to what they were before the interrupt;
+ *
+ * - If the stepped instruction wrote to the SRRs, we need to avoid
+ *   undoing that;
+ *
+ * - We set the MSR_SE bit, so it needs to be cleared.
+ *
+ */
 void kvm_arch_emulate_singlestep(CPUState *cs, int enabled)
 {
     PowerPCCPU *cpu = POWERPC_CPU(cs);
     CPUPPCState *env = &cpu->env;
-    target_ulong trace_handler_addr;
     uint32_t insn;
-    bool rfid;
+    bool rfid, mmu_on;
 
     if (!enabled) {
         return;
@@ -1600,28 +1655,29 @@ void kvm_arch_emulate_singlestep(CPUState *cs, int enabled)
         }
 
         env->spr[SPR_SRR1] |= (1ULL << MSR_SE);
+        mmu_on = srr1_ir & srr1_dr;
     } else {
         env->msr |= (1ULL << MSR_SE);
+        mmu_on = msr_ir & msr_dr;
     }
 
-    /*
-     * We set a breakpoint at the interrupt handler address so
-     * that the singlestep will be seen by KVM (this is treated by
-     * KVM like an ordinary breakpoint) and control is returned to
-     * QEMU.
-     */
-    trace_handler_addr = ppc_get_trace_int_handler_addr(cs);
+    kvm_insert_singlestep_breakpoint(cs, mmu_on);
+}
 
-    if (env->nip == trace_handler_addr) {
-        /*
-         * We are trying to step over the interrupt handler
-         * address itself; move the breakpoint to the next
-         * instruction.
-         */
-        trace_handler_addr += 4;
+void kvm_singlestep_ail_change(CPUState *cs)
+{
+    PowerPCCPU *cpu = POWERPC_CPU(cs);
+    CPUPPCState *env = &cpu->env;
+
+    if (!kvm_enabled() || cap_ppc_singlestep) {
+        return;
     }
 
-    kvm_insert_breakpoint(cs, trace_handler_addr, 4, GDB_BREAKPOINT_SW);
+    /* The instruction being stepped altered the interrupt vectors
+     * location (AIL). Re-insert the singlestep breakpoint at the new
+     * location */
+    kvm_remove_breakpoint(cs, env->trace_handler_addr, 4, GDB_BREAKPOINT_SW);
+    kvm_insert_singlestep_breakpoint(cs, (msr_ir & msr_dr));
 }
 
 void kvm_arch_update_guest_debug(CPUState *cs, struct kvm_guest_debug *dbg)
@@ -1672,12 +1728,17 @@ static void restore_singlestep_env(CPUState *cs)
     int reg;
     int spr;
 
+    /*
+     * PC is at the instruction following the one that got stepped.
+     * We can ignore branching instructions because we're looking for
+     * moves only.
+     */
     insn = ppc_gdb_read_insn(cs, env->spr[SPR_SRR0] - 4);
 
     env->spr[SPR_SRR0] = env->sstep_srr0;
     env->spr[SPR_SRR1] = env->sstep_srr1;
 
-    if (ppc_gdb_get_op(insn) != 31) {
+    if (ppc_gdb_get_op(insn) != OP_MOV) {
         return;
     }
 
@@ -1708,17 +1769,16 @@ static int kvm_handle_singlestep(CPUState *cs, target_ulong address)
 {
     PowerPCCPU *cpu = POWERPC_CPU(cs);
     CPUPPCState *env = &cpu->env;
-    target_ulong trace_handler_addr;
 
     if (cap_ppc_singlestep) {
         return 1;
     }
 
     cpu_synchronize_state(cs);
-    trace_handler_addr = ppc_get_trace_int_handler_addr(cs);
 
-    if (address == trace_handler_addr) {
-        kvm_remove_breakpoint(cs, trace_handler_addr, 4, GDB_BREAKPOINT_SW);
+    if (address == env->trace_handler_addr) {
+        kvm_remove_breakpoint(cs, env->trace_handler_addr, 4,
+                              GDB_BREAKPOINT_SW);
 
         if (env->guest_singlestep) {
             /*
@@ -1735,13 +1795,14 @@ static int kvm_handle_singlestep(CPUState *cs, target_ulong address)
                                           PPC_BITMASK(43, 47));
         restore_singlestep_env(cs);
 
-    } else if (address == trace_handler_addr + 4) {
+    } else if (address == env->trace_handler_addr + 4) {
         /*
          * A step at trace_handler_addr would interfere with the
-         * singlestep mechanism itself, so we have previously
+         * single step mechanism itself, so we have previously
          * displaced the breakpoint to the next instruction.
          */
-        kvm_remove_breakpoint(cs, trace_handler_addr + 4, 4, GDB_BREAKPOINT_SW);
+        kvm_remove_breakpoint(cs, env->trace_handler_addr + 4, 4,
+                              GDB_BREAKPOINT_SW);
         restore_singlestep_env(cs);
     }
 
@@ -1777,16 +1838,16 @@ static int kvm_handle_hw_breakpoint(CPUState *cs,
 
 static int kvm_handle_sw_breakpoint(CPUState *cs, target_ulong address)
 {
-    target_ulong trace_handler_addr;
+    PowerPCCPU *cpu = POWERPC_CPU(cs);
+    CPUPPCState *env = &cpu->env;
 
     if (cap_ppc_singlestep) {
         return 1;
     }
 
     cpu_synchronize_state(cs);
-    trace_handler_addr = ppc_get_trace_int_handler_addr(cs);
 
-    if (address == trace_handler_addr) {
+    if (address == env->trace_handler_addr) {
         CPU_FOREACH(cs) {
             if (cs->singlestep_enabled) {
                 /*

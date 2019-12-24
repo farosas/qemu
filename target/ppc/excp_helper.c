@@ -784,13 +784,14 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp_model, int excp)
     check_tlb_flush(env, false);
 }
 
-target_ulong ppc_get_trace_int_handler_addr(CPUState *cs)
+target_ulong ppc_get_trace_int_handler_addr(CPUState *cs, bool mmu_on)
 {
     PowerPCCPU *cpu = POWERPC_CPU(cs);
     CPUPPCState *env = &cpu->env;
     int ail = 0;
 
-    if (msr_ir && msr_dr) {
+    /* AIL is only used if translation is enabled */
+    if (mmu_on) {
         ail = (env->spr[SPR_LPCR] & LPCR_AIL) >> LPCR_AIL_SHIFT;
     }
 
