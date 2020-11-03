@@ -136,8 +136,6 @@ enum {
     OPTION_PIDFILE,
 };
 
-extern QemuOptsList qemu_chardev_opts;
-
 static void init_qmp_commands(void)
 {
     qmp_init_marshal(&qmp_commands);
@@ -216,18 +214,15 @@ static void process_options(int argc, char *argv[])
             }
         case OPTION_CHARDEV:
             {
-                /* TODO This interface is not stable until we QAPIfy it */
-                QemuOpts *opts = qemu_opts_parse_noisily(&qemu_chardev_opts,
-                                                         optarg, true);
-                if (opts == NULL) {
-                    exit(EXIT_FAILURE);
-                }
+                ChardevOptions *options;
 
-                if (!qemu_chr_new_from_opts(opts, NULL, &error_fatal)) {
-                    /* No error, but NULL returned means help was printed */
+                options = qemu_chr_parse_cli_str(optarg, &error_fatal);
+                if (!options) {
+                    /* Help was printed */
                     exit(EXIT_SUCCESS);
                 }
-                qemu_opts_del(opts);
+                qemu_chr_new_cli(options, &error_fatal);
+                qapi_free_ChardevOptions(options);
                 break;
             }
         case OPTION_EXPORT:
