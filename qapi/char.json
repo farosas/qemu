@@ -227,7 +227,8 @@
   'data': { '*in': 'str',
             'out': 'str',
             '*append': 'bool' },
-  'base': 'ChardevCommon' }
+  'base': 'ChardevCommon',
+  'aliases': [ { 'name': 'path', 'source': ['out'] } ] }
 
 ##
 # @ChardevHostdev:
@@ -241,7 +242,8 @@
 ##
 { 'struct': 'ChardevHostdev',
   'data': { 'device': 'str' },
-  'base': 'ChardevCommon' }
+  'base': 'ChardevCommon',
+  'aliases': [ { 'name': 'path', 'source': ['device'] } ] }
 
 ##
 # @ChardevSocket:
@@ -342,7 +344,8 @@
 { 'struct': 'ChardevSpiceChannel',
   'data': { 'type': 'str' },
   'base': 'ChardevCommon',
-  'if': 'defined(CONFIG_SPICE)' }
+  'if': 'defined(CONFIG_SPICE)',
+  'aliases': [ { 'name': 'name', 'source': ['type'] } ] }
 
 ##
 # @ChardevSpicePort:
@@ -356,7 +359,8 @@
 { 'struct': 'ChardevSpicePort',
   'data': { 'fqdn': 'str' },
   'base': 'ChardevCommon',
-  'if': 'defined(CONFIG_SPICE)' }
+  'if': 'defined(CONFIG_SPICE)',
+  'aliases': [ { 'name': 'name', 'source': ['fqdn'] } ] }
 
 ##
 # @ChardevVC:
@@ -439,7 +443,8 @@
             'vc': 'ChardevVC',
             'ringbuf': 'ChardevRingbuf',
             # next one is just for compatibility
-            'memory': 'ChardevRingbuf' } }
+            'memory': 'ChardevRingbuf' },
+  'aliases': [ { 'source': ['data'] } ] }
 
 ##
 # @ChardevReturn:
