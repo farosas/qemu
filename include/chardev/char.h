@@ -281,6 +281,9 @@ struct ChardevClass {
     /* parse command line options and populate QAPI @backend */
     void (*parse)(QemuOpts *opts, ChardevBackend *backend, Error **errp);
 
+    /* convert legacy command line options into QAPI equivalents */
+    void (*translate_legacy_options)(QDict *args);
+
     /* called after construction, open/starts the backend */
     void (*open)(Chardev *chr, ChardevBackend *backend,
                  bool *be_opened, Error **errp);

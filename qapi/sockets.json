@@ -128,7 +128,11 @@
     'inet': 'InetSocketAddress',
     'unix': 'UnixSocketAddress',
     'vsock': 'VsockSocketAddress',
-    'fd': 'String' } }
+    'fd': 'String' },
+  'aliases': [
+    { 'source': ['data'] },
+    { 'name': 'fd', 'source': ['data', 'str'] }
+  ] }
 
 ##
 # @SocketAddressType:
