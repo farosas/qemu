@@ -745,27 +745,12 @@ static void vdagent_chr_set_fe_open(struct Chardev *chr, int fe_open)
     trace_vdagent_open();
 }
 
-static void vdagent_chr_parse(QemuOpts *opts, ChardevBackend *backend,
-                              Error **errp)
-{
-    ChardevQemuVDAgent *cfg;
-
-    backend->type = CHARDEV_BACKEND_KIND_QEMU_VDAGENT;
-    cfg = backend->u.qemu_vdagent.data = g_new0(ChardevQemuVDAgent, 1);
-    qemu_chr_parse_common(opts, qapi_ChardevQemuVDAgent_base(cfg));
-    cfg->has_mouse = true;
-    cfg->mouse = qemu_opt_get_bool(opts, "mouse", VDAGENT_MOUSE_DEFAULT);
-    cfg->has_clipboard = true;
-    cfg->clipboard = qemu_opt_get_bool(opts, "clipboard", VDAGENT_CLIPBOARD_DEFAULT);
-}
-
 /* ------------------------------------------------------------------ */
 
 static void vdagent_chr_class_init(ObjectClass *oc, void *data)
 {
     ChardevClass *cc = CHARDEV_CLASS(oc);
 
-    cc->parse            = vdagent_chr_parse;
     cc->open             = vdagent_chr_open;
     cc->chr_write        = vdagent_chr_write;
     cc->chr_set_fe_open  = vdagent_chr_set_fe_open;
