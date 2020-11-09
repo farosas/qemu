@@ -1032,12 +1032,11 @@ Chardev *qemu_chardev_new(const char *id, const char *typename,
     return chr;
 }
 
-ChardevReturn *qmp_chardev_add(const char *id, ChardevBackend *backend,
-                               Error **errp)
+static Chardev *chardev_new_qapi(const char *id, ChardevBackend *backend,
+                                 Error **errp)
 {
     ERRP_GUARD();
     const ChardevClass *cc;
-    ChardevReturn *ret;
     g_autoptr(Chardev) chr = NULL;
 
     if (qemu_chr_find(id)) {
@@ -1047,17 +1046,32 @@ ChardevReturn *qmp_chardev_add(const char *id, ChardevBackend *backend,
 
     cc = char_get_class(ChardevBackendKind_str(backend->type), errp);
     if (!cc) {
-        goto err;
+        return NULL;
     }
 
     chr = chardev_new(id, object_class_get_name(OBJECT_CLASS(cc)),
                       backend, NULL, false, errp);
     if (!chr) {
-        goto err;
+        return NULL;
     }
 
     if (!object_property_try_add_child(get_chardevs_root(), id, OBJECT(chr),
                                        errp)) {
+        object_unref(OBJECT(chr));
+        return NULL;
+    }
+
+    return chr;
+}
+
+ChardevReturn *qmp_chardev_add(const char *id, ChardevBackend *backend,
+                               Error **errp)
+{
+    ChardevReturn *ret;
+    Chardev *chr;
+
+    chr = chardev_new_qapi(id, backend, errp);
+    if (!chr) {
         goto err;
     }
 
@@ -1072,6 +1086,11 @@ ChardevReturn *qmp_chardev_add(const char *id, ChardevBackend *backend,
 err:
     error_prepend(errp, "Failed to add chardev '%s': ", id);
     return NULL;
+}
+
+Chardev *qemu_chr_new_cli(ChardevOptions *options, Error **errp)
+{
+    return chardev_new_qapi(options->id, options->backend, errp);
 }
 
 ChardevReturn *qmp_chardev_change(const char *id, ChardevBackend *backend,
