@@ -1557,7 +1557,7 @@ ERST
 
     {
         .name       = "chardev-add",
-        .args_type  = "args:s",
+        .args_type  = "args:S",
         .params     = "args",
         .help       = "add chardev",
         .cmd        = hmp_chardev_add,
@@ -1571,8 +1571,8 @@ ERST
 
     {
         .name       = "chardev-change",
-        .args_type  = "id:s,args:s",
-        .params     = "id args",
+        .args_type  = "args:S",
+        .params     = "args",
         .help       = "change chardev",
         .cmd        = hmp_chardev_change,
     },
