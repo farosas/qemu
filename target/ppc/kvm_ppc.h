@@ -24,6 +24,7 @@ void kvmppc_enable_logical_ci_hcalls(void);
 void kvmppc_enable_set_mode_hcall(void);
 void kvmppc_enable_clear_ref_mod_hcalls(void);
 void kvmppc_enable_h_page_init(void);
+void kvmppc_enable_h_rpt_invalidate(void);
 void kvmppc_set_papr(PowerPCCPU *cpu);
 int kvmppc_set_compat(PowerPCCPU *cpu, uint32_t compat_pvr);
 void kvmppc_set_mpic_proxy(PowerPCCPU *cpu, int mpic_proxy);
@@ -72,6 +73,7 @@ bool kvmppc_has_cap_nested_kvm_hv(void);
 int kvmppc_set_cap_nested_kvm_hv(int enable);
 int kvmppc_get_cap_large_decr(void);
 int kvmppc_enable_cap_large_decr(PowerPCCPU *cpu, int enable);
+int kvmppc_has_cap_rpt_invalidate(void);
 int kvmppc_enable_hwrng(void);
 int kvmppc_put_books_sregs(PowerPCCPU *cpu);
 PowerPCCPUClass *kvm_ppc_get_host_cpu_class(void);
@@ -148,6 +150,10 @@ static inline void kvmppc_enable_clear_ref_mod_hcalls(void)
 }
 
 static inline void kvmppc_enable_h_page_init(void)
+{
+}
+
+static inline void kvmppc_enable_h_rpt_invalidate(void)
 {
 }
 
@@ -385,6 +391,11 @@ static inline int kvmppc_get_cap_large_decr(void)
 static inline int kvmppc_enable_cap_large_decr(PowerPCCPU *cpu, int enable)
 {
     return -1;
+}
+
+static inline int kvmppc_has_cap_rpt_invalidate(void)
+{
+    return false;
 }
 
 static inline int kvmppc_enable_hwrng(void)
