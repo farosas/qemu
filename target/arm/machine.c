@@ -6,6 +6,7 @@
 #include "kvm_arm.h"
 #include "internals.h"
 #include "migration/cpu.h"
+#include "cpregs.h"
 
 /* The cpu-specific constant value of PAMax; also used by hw/arm/virt. */
 unsigned int arm_pamax(ARMCPU *cpu)
