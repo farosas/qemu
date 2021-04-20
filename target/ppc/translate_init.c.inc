@@ -741,17 +741,27 @@ static inline void vscr_init(CPUPPCState *env, uint32_t val)
     _spr_register(env, num, name, uea_read, uea_write,                         \
                   oea_read, oea_write, hea_read, hea_write, initial_value)
 #else
-#define spr_register_kvm(env, num, name, uea_read, uea_write,                  \
-                         oea_read, oea_write, one_reg_id, initial_value)       \
-    _spr_register(env, num, name, uea_read, uea_write,                         \
-                  oea_read, oea_write, oea_read, oea_write,                    \
-                  one_reg_id, initial_value)
-#define spr_register_kvm_hv(env, num, name, uea_read, uea_write,               \
-                            oea_read, oea_write, hea_read, hea_write,          \
-                            one_reg_id, initial_value)                         \
-    _spr_register(env, num, name, uea_read, uea_write,                         \
-                  oea_read, oea_write, hea_read, hea_write,                    \
-                  one_reg_id, initial_value)
+#if !defined(CONFIG_TCG)
+#define spr_register_kvm(env, num, name, uea_read, uea_write,		\
+			 oea_read, oea_write, one_reg_id, initial_value) \
+	_spr_register(env, num, name, one_reg_id, initial_value)
+#define spr_register_kvm_hv(env, num, name, uea_read, uea_write,	\
+			    oea_read, oea_write, hea_read, hea_write,	\
+			    one_reg_id, initial_value)			\
+	_spr_register(env, num, name, one_reg_id, initial_value)
+#else
+#define spr_register_kvm(env, num, name, uea_read, uea_write,		\
+			 oea_read, oea_write, one_reg_id, initial_value) \
+	_spr_register(env, num, name, uea_read, uea_write,		\
+		      oea_read, oea_write, oea_read, oea_write,		\
+		      one_reg_id, initial_value)
+#define spr_register_kvm_hv(env, num, name, uea_read, uea_write,	\
+			    oea_read, oea_write, hea_read, hea_write,	\
+			    one_reg_id, initial_value)			\
+	_spr_register(env, num, name, uea_read, uea_write,		\
+		      oea_read, oea_write, hea_read, hea_write,		\
+		      one_reg_id, initial_value)
+#endif
 #endif
 #endif
 
@@ -769,6 +779,7 @@ static inline void vscr_init(CPUPPCState *env, uint32_t val)
 
 static inline void _spr_register(CPUPPCState *env, int num,
                                  const char *name,
+#ifdef CONFIG_TCG
                                  void (*uea_read)(DisasContext *ctx,
                                                   int gprn, int sprn),
                                  void (*uea_write)(DisasContext *ctx,
@@ -783,6 +794,7 @@ static inline void _spr_register(CPUPPCState *env, int num,
                                                   int gprn, int sprn),
                                  void (*hea_write)(DisasContext *opaque,
                                                    int sprn, int gprn),
+#endif
 #endif
 #if defined(CONFIG_KVM)
                                  uint64_t one_reg_id,
@@ -805,6 +817,7 @@ static inline void _spr_register(CPUPPCState *env, int num,
            name, initial_value);
 #endif
     spr->name = name;
+#ifdef CONFIG_TCG
     spr->uea_read = uea_read;
     spr->uea_write = uea_write;
 #if !defined(CONFIG_USER_ONLY)
@@ -812,6 +825,7 @@ static inline void _spr_register(CPUPPCState *env, int num,
     spr->oea_write = oea_write;
     spr->hea_read = hea_read;
     spr->hea_write = hea_write;
+#endif
 #endif
 #if defined(CONFIG_KVM)
     spr->one_reg_id = one_reg_id,
