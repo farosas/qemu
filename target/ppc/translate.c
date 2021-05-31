@@ -951,7 +951,8 @@ void spr_write_excp_vector(DisasContext *ctx, int sprn, int gprn)
     TCGv t0 = tcg_temp_new();
     tcg_gen_ld_tl(t0, cpu_env, offsetof(CPUPPCState, ivor_mask));
     tcg_gen_and_tl(t0, t0, cpu_gpr[gprn]);
-    tcg_gen_st_tl(t0, cpu_env, offsetof(CPUPPCState, excp_vectors[sprn_offs]));
+    tcg_gen_st_tl(t0, cpu_env, offsetof(CPUPPCState, entry_points[sprn_offs]) +
+                  offsetof(PPCInterrupt, addr));
     gen_store_spr(sprn, t0);
     tcg_temp_free(t0);
 }

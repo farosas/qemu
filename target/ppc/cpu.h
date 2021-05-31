@@ -174,6 +174,33 @@ enum {
     POWERPC_EXCP_TRAP          = 0x40,
 };
 
+typedef struct PPCInterrupt PPCInterrupt;
+typedef struct ppc_intr_args ppc_intr_args;
+typedef void (*ppc_intr_fn_t)(PowerPCCPU *cpu, PPCInterrupt *intr,
+                              int excp_model, ppc_intr_args *regs,
+                              bool *ignore);
+
+struct ppc_intr_args {
+    target_ulong nip;
+    target_ulong msr;
+    target_ulong new_nip;
+    target_ulong new_msr;
+    int sprn_srr0;
+    int sprn_srr1;
+    int sprn_asrr0;
+    int sprn_asrr1;
+    int lev;
+};
+
+struct PPCInterrupt {
+    Object parent;
+
+    int id;
+    const char *name;
+    target_ulong addr;
+    ppc_intr_fn_t setup_regs;
+};
+
 #define PPC_INPUT(env) ((env)->bus_model)
 
 /*****************************************************************************/
@@ -1115,7 +1142,7 @@ struct CPUPPCState {
     uint32_t irq_input_state;
     void **irq_inputs;
 
-    target_ulong excp_vectors[POWERPC_EXCP_NB]; /* Exception vectors */
+    PPCInterrupt entry_points[POWERPC_EXCP_NB];
     target_ulong excp_prefix;
     target_ulong ivor_mask;
     target_ulong ivpr_mask;

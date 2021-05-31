@@ -46,6 +46,7 @@
 #include "helper_regs.h"
 #include "internal.h"
 #include "spr_tcg.h"
+#include "ppc_intr.h"
 
 /* #define PPC_DEBUG_SPR */
 /* #define USE_APPLE_GDB */
@@ -2132,16 +2133,16 @@ static void register_8xx_sprs(CPUPPCState *env)
 static void init_excp_4xx_real(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_PIT]      = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_FIT]      = 0x00001010;
-    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00001020;
-    env->excp_vectors[POWERPC_EXCP_DEBUG]    = 0x00002000;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_CRITICAL);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00001000, POWERPC_EXCP_PIT);
+    ppc_intr_add(env, 0x00001010, POWERPC_EXCP_FIT);
+    ppc_intr_add(env, 0x00001020, POWERPC_EXCP_WDT);
+    ppc_intr_add(env, 0x00002000, POWERPC_EXCP_DEBUG);
     env->ivor_mask = 0x0000FFF0UL;
     env->ivpr_mask = 0xFFFF0000UL;
     /* Hardware reset vector */
@@ -2152,20 +2153,20 @@ static void init_excp_4xx_real(CPUPPCState *env)
 static void init_excp_4xx_softmmu(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_PIT]      = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_FIT]      = 0x00001010;
-    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00001020;
-    env->excp_vectors[POWERPC_EXCP_DTLB]     = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_ITLB]     = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_DEBUG]    = 0x00002000;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_CRITICAL);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00001000, POWERPC_EXCP_PIT);
+    ppc_intr_add(env, 0x00001010, POWERPC_EXCP_FIT);
+    ppc_intr_add(env, 0x00001020, POWERPC_EXCP_WDT);
+    ppc_intr_add(env, 0x00001100, POWERPC_EXCP_DTLB);
+    ppc_intr_add(env, 0x00001200, POWERPC_EXCP_ITLB);
+    ppc_intr_add(env, 0x00002000, POWERPC_EXCP_DEBUG);
     env->ivor_mask = 0x0000FFF0UL;
     env->ivpr_mask = 0xFFFF0000UL;
     /* Hardware reset vector */
@@ -2176,21 +2177,21 @@ static void init_excp_4xx_softmmu(CPUPPCState *env)
 static void init_excp_MPC5xx(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_FPA]      = 0x00000E00;
-    env->excp_vectors[POWERPC_EXCP_EMUL]     = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DABR]     = 0x00001C00;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001C00;
-    env->excp_vectors[POWERPC_EXCP_MEXTBR]   = 0x00001E00;
-    env->excp_vectors[POWERPC_EXCP_NMEXTBR]  = 0x00001F00;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00000E00, POWERPC_EXCP_FPA);
+    ppc_intr_add(env, 0x00001000, POWERPC_EXCP_EMUL);
+    ppc_intr_add(env, 0x00001C00, POWERPC_EXCP_DABR);
+    ppc_intr_add(env, 0x00001C00, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001E00, POWERPC_EXCP_MEXTBR);
+    ppc_intr_add(env, 0x00001F00, POWERPC_EXCP_NMEXTBR);
     env->ivor_mask = 0x0000FFF0UL;
     env->ivpr_mask = 0xFFFF0000UL;
     /* Hardware reset vector */
@@ -2201,27 +2202,27 @@ static void init_excp_MPC5xx(CPUPPCState *env)
 static void init_excp_MPC8xx(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_FPA]      = 0x00000E00;
-    env->excp_vectors[POWERPC_EXCP_EMUL]     = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_ITLB]     = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DTLB]     = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_ITLBE]    = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_DTLBE]    = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_DABR]     = 0x00001C00;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001C00;
-    env->excp_vectors[POWERPC_EXCP_MEXTBR]   = 0x00001E00;
-    env->excp_vectors[POWERPC_EXCP_NMEXTBR]  = 0x00001F00;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00000E00, POWERPC_EXCP_FPA);
+    ppc_intr_add(env, 0x00001000, POWERPC_EXCP_EMUL);
+    ppc_intr_add(env, 0x00001100, POWERPC_EXCP_ITLB);
+    ppc_intr_add(env, 0x00001200, POWERPC_EXCP_DTLB);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_ITLBE);
+    ppc_intr_add(env, 0x00001400, POWERPC_EXCP_DTLBE);
+    ppc_intr_add(env, 0x00001C00, POWERPC_EXCP_DABR);
+    ppc_intr_add(env, 0x00001C00, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001E00, POWERPC_EXCP_MEXTBR);
+    ppc_intr_add(env, 0x00001F00, POWERPC_EXCP_NMEXTBR);
     env->ivor_mask = 0x0000FFF0UL;
     env->ivpr_mask = 0xFFFF0000UL;
     /* Hardware reset vector */
@@ -2232,23 +2233,23 @@ static void init_excp_MPC8xx(CPUPPCState *env)
 static void init_excp_G2(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000A00;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_IFTLB]    = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DLTLB]    = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DSTLB]    = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000A00, POWERPC_EXCP_CRITICAL);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00001000, POWERPC_EXCP_IFTLB);
+    ppc_intr_add(env, 0x00001100, POWERPC_EXCP_DLTLB);
+    ppc_intr_add(env, 0x00001200, POWERPC_EXCP_DSTLB);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001400, POWERPC_EXCP_SMI);
     /* Hardware reset vector */
     env->hreset_vector = 0x00000100UL;
 #endif
@@ -2257,26 +2258,26 @@ static void init_excp_G2(CPUPPCState *env)
 static void init_excp_e200(CPUPPCState *env, target_ulong ivpr_mask)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000FFC;
-    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_APU]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_FIT]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DTLB]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ITLB]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DEBUG]    = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_SPEU]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_EFPDI]    = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_EFPRI]    = 0x00000000;
+    ppc_intr_add(env, 0x00000FFC, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_CRITICAL);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_APU);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_FIT);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_WDT);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_DTLB);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_ITLB);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_DEBUG);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_SPEU);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_EFPDI);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_EFPRI);
     env->ivor_mask = 0x0000FFF7UL;
     env->ivpr_mask = ivpr_mask;
     /* Hardware reset vector */
@@ -2287,22 +2288,22 @@ static void init_excp_e200(CPUPPCState *env, target_ulong ivpr_mask)
 static void init_excp_BookE(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_APU]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_FIT]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DTLB]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ITLB]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DEBUG]    = 0x00000000;
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_CRITICAL);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_APU);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_FIT);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_WDT);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_DTLB);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_ITLB);
+    ppc_intr_add(env, 0x00000000, POWERPC_EXCP_DEBUG);
     env->ivor_mask = 0x0000FFF0UL;
     env->ivpr_mask = 0xFFFF0000UL;
     /* Hardware reset vector */
@@ -2313,18 +2314,18 @@ static void init_excp_BookE(CPUPPCState *env)
 static void init_excp_601(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_IO]       = 0x00000A00;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_RUNM]     = 0x00002000;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000A00, POWERPC_EXCP_IO);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00002000, POWERPC_EXCP_RUNM);
     /* Hardware reset vector */
     env->hreset_vector = 0x00000100UL;
 #endif
@@ -2334,24 +2335,24 @@ static void init_excp_602(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
     /* XXX: exception prefix has a special behavior on 602 */
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_IFTLB]    = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DLTLB]    = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DSTLB]    = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00001500;
-    env->excp_vectors[POWERPC_EXCP_EMUL]     = 0x00001600;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00001000, POWERPC_EXCP_IFTLB);
+    ppc_intr_add(env, 0x00001100, POWERPC_EXCP_DLTLB);
+    ppc_intr_add(env, 0x00001200, POWERPC_EXCP_DSTLB);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001400, POWERPC_EXCP_SMI);
+    ppc_intr_add(env, 0x00001500, POWERPC_EXCP_WDT);
+    ppc_intr_add(env, 0x00001600, POWERPC_EXCP_EMUL);
     /* Hardware reset vector */
     env->hreset_vector = 0x00000100UL;
 #endif
@@ -2360,22 +2361,22 @@ static void init_excp_602(CPUPPCState *env)
 static void init_excp_603(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_IFTLB]    = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DLTLB]    = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DSTLB]    = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00001000, POWERPC_EXCP_IFTLB);
+    ppc_intr_add(env, 0x00001100, POWERPC_EXCP_DLTLB);
+    ppc_intr_add(env, 0x00001200, POWERPC_EXCP_DSTLB);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001400, POWERPC_EXCP_SMI);
     /* Hardware reset vector */
     env->hreset_vector = 0x00000100UL;
 #endif
@@ -2384,20 +2385,20 @@ static void init_excp_603(CPUPPCState *env)
 static void init_excp_604(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00000F00, POWERPC_EXCP_PERFM);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001400, POWERPC_EXCP_SMI);
     /* Hardware reset vector */
     env->hreset_vector = 0x00000100UL;
 #endif
@@ -2406,21 +2407,21 @@ static void init_excp_604(CPUPPCState *env)
 static void init_excp_7x0(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_THERM]    = 0x00001700;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00000F00, POWERPC_EXCP_PERFM);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001400, POWERPC_EXCP_SMI);
+    ppc_intr_add(env, 0x00001700, POWERPC_EXCP_THERM);
     /* Hardware reset vector */
     env->hreset_vector = 0x00000100UL;
 #endif
@@ -2429,20 +2430,20 @@ static void init_excp_7x0(CPUPPCState *env)
 static void init_excp_750cl(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00000F00, POWERPC_EXCP_PERFM);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001400, POWERPC_EXCP_SMI);
     /* Hardware reset vector */
     env->hreset_vector = 0x00000100UL;
 #endif
@@ -2451,20 +2452,20 @@ static void init_excp_750cl(CPUPPCState *env)
 static void init_excp_750cx(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_THERM]    = 0x00001700;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00000F00, POWERPC_EXCP_PERFM);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001700, POWERPC_EXCP_THERM);
     /* Hardware reset vector */
     env->hreset_vector = 0x00000100UL;
 #endif
@@ -2474,24 +2475,24 @@ static void init_excp_750cx(CPUPPCState *env)
 static void init_excp_7x5(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_IFTLB]    = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DLTLB]    = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DSTLB]    = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_THERM]    = 0x00001700;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00000F00, POWERPC_EXCP_PERFM);
+    ppc_intr_add(env, 0x00001000, POWERPC_EXCP_IFTLB);
+    ppc_intr_add(env, 0x00001100, POWERPC_EXCP_DLTLB);
+    ppc_intr_add(env, 0x00001200, POWERPC_EXCP_DSTLB);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001400, POWERPC_EXCP_SMI);
+    ppc_intr_add(env, 0x00001700, POWERPC_EXCP_THERM);
     /* Hardware reset vector */
     env->hreset_vector = 0x00000100UL;
 #endif
@@ -2500,23 +2501,23 @@ static void init_excp_7x5(CPUPPCState *env)
 static void init_excp_7400(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_VPU]      = 0x00000F20;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_VPUA]     = 0x00001600;
-    env->excp_vectors[POWERPC_EXCP_THERM]    = 0x00001700;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00000F00, POWERPC_EXCP_PERFM);
+    ppc_intr_add(env, 0x00000F20, POWERPC_EXCP_VPU);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001400, POWERPC_EXCP_SMI);
+    ppc_intr_add(env, 0x00001600, POWERPC_EXCP_VPUA);
+    ppc_intr_add(env, 0x00001700, POWERPC_EXCP_THERM);
     /* Hardware reset vector */
     env->hreset_vector = 0x00000100UL;
 #endif
@@ -2525,25 +2526,25 @@ static void init_excp_7400(CPUPPCState *env)
 static void init_excp_7450(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_VPU]      = 0x00000F20;
-    env->excp_vectors[POWERPC_EXCP_IFTLB]    = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DLTLB]    = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DSTLB]    = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_VPUA]     = 0x00001600;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00000F00, POWERPC_EXCP_PERFM);
+    ppc_intr_add(env, 0x00000F20, POWERPC_EXCP_VPU);
+    ppc_intr_add(env, 0x00001000, POWERPC_EXCP_IFTLB);
+    ppc_intr_add(env, 0x00001100, POWERPC_EXCP_DLTLB);
+    ppc_intr_add(env, 0x00001200, POWERPC_EXCP_DSTLB);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001400, POWERPC_EXCP_SMI);
+    ppc_intr_add(env, 0x00001600, POWERPC_EXCP_VPUA);
     /* Hardware reset vector */
     env->hreset_vector = 0x00000100UL;
 #endif
@@ -2553,26 +2554,26 @@ static void init_excp_7450(CPUPPCState *env)
 static void init_excp_970(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_DSEG]     = 0x00000380;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_ISEG]     = 0x00000480;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_HDECR]    = 0x00000980;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_VPU]      = 0x00000F20;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_MAINT]    = 0x00001600;
-    env->excp_vectors[POWERPC_EXCP_VPUA]     = 0x00001700;
-    env->excp_vectors[POWERPC_EXCP_THERM]    = 0x00001800;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000380, POWERPC_EXCP_DSEG);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000480, POWERPC_EXCP_ISEG);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000980, POWERPC_EXCP_HDECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00000F00, POWERPC_EXCP_PERFM);
+    ppc_intr_add(env, 0x00000F20, POWERPC_EXCP_VPU);
+    ppc_intr_add(env, 0x00001300, POWERPC_EXCP_IABR);
+    ppc_intr_add(env, 0x00001600, POWERPC_EXCP_MAINT);
+    ppc_intr_add(env, 0x00001700, POWERPC_EXCP_VPUA);
+    ppc_intr_add(env, 0x00001800, POWERPC_EXCP_THERM);
     /* Hardware reset vector */
     env->hreset_vector = 0x0000000000000100ULL;
 #endif
@@ -2581,27 +2582,27 @@ static void init_excp_970(CPUPPCState *env)
 static void init_excp_POWER7(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_DSEG]     = 0x00000380;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_ISEG]     = 0x00000480;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_HDECR]    = 0x00000980;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_HDSI]     = 0x00000E00;
-    env->excp_vectors[POWERPC_EXCP_HISI]     = 0x00000E20;
-    env->excp_vectors[POWERPC_EXCP_HV_EMU]   = 0x00000E40;
-    env->excp_vectors[POWERPC_EXCP_HV_MAINT] = 0x00000E60;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_VPU]      = 0x00000F20;
-    env->excp_vectors[POWERPC_EXCP_VSXU]     = 0x00000F40;
+    ppc_intr_add(env, 0x00000100, POWERPC_EXCP_RESET);
+    ppc_intr_add(env, 0x00000200, POWERPC_EXCP_MCHECK);
+    ppc_intr_add(env, 0x00000300, POWERPC_EXCP_DSI);
+    ppc_intr_add(env, 0x00000380, POWERPC_EXCP_DSEG);
+    ppc_intr_add(env, 0x00000400, POWERPC_EXCP_ISI);
+    ppc_intr_add(env, 0x00000480, POWERPC_EXCP_ISEG);
+    ppc_intr_add(env, 0x00000500, POWERPC_EXCP_EXTERNAL);
+    ppc_intr_add(env, 0x00000600, POWERPC_EXCP_ALIGN);
+    ppc_intr_add(env, 0x00000700, POWERPC_EXCP_PROGRAM);
+    ppc_intr_add(env, 0x00000800, POWERPC_EXCP_FPU);
+    ppc_intr_add(env, 0x00000900, POWERPC_EXCP_DECR);
+    ppc_intr_add(env, 0x00000980, POWERPC_EXCP_HDECR);
+    ppc_intr_add(env, 0x00000C00, POWERPC_EXCP_SYSCALL);
+    ppc_intr_add(env, 0x00000D00, POWERPC_EXCP_TRACE);
+    ppc_intr_add(env, 0x00000E00, POWERPC_EXCP_HDSI);
+    ppc_intr_add(env, 0x00000E20, POWERPC_EXCP_HISI);
+    ppc_intr_add(env, 0x00000E40, POWERPC_EXCP_HV_EMU);
+    ppc_intr_add(env, 0x00000E60, POWERPC_EXCP_HV_MAINT);
+    ppc_intr_add(env, 0x00000F00, POWERPC_EXCP_PERFM);
+    ppc_intr_add(env, 0x00000F20, POWERPC_EXCP_VPU);
+    ppc_intr_add(env, 0x00000F40, POWERPC_EXCP_VSXU);
     /* Hardware reset vector */
     env->hreset_vector = 0x0000000000000100ULL;
 #endif
@@ -2612,10 +2613,10 @@ static void init_excp_POWER8(CPUPPCState *env)
     init_excp_POWER7(env);
 
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_SDOOR]    = 0x00000A00;
-    env->excp_vectors[POWERPC_EXCP_FU]       = 0x00000F60;
-    env->excp_vectors[POWERPC_EXCP_HV_FU]    = 0x00000F80;
-    env->excp_vectors[POWERPC_EXCP_SDOOR_HV] = 0x00000E80;
+    ppc_intr_add(env, 0x00000A00, POWERPC_EXCP_SDOOR);
+    ppc_intr_add(env, 0x00000F60, POWERPC_EXCP_FU);
+    ppc_intr_add(env, 0x00000F80, POWERPC_EXCP_HV_FU);
+    ppc_intr_add(env, 0x00000E80, POWERPC_EXCP_SDOOR_HV);
 #endif
 }
 
@@ -2624,8 +2625,8 @@ static void init_excp_POWER9(CPUPPCState *env)
     init_excp_POWER8(env);
 
 #if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_HVIRT]    = 0x00000EA0;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL_VECTORED] = 0x00017000;
+    ppc_intr_add(env, 0x00000EA0, POWERPC_EXCP_HVIRT);
+    ppc_intr_add(env, 0x00017000, POWERPC_EXCP_SYSCALL_VECTORED);
 #endif
 }
 
@@ -8375,13 +8376,8 @@ static void init_ppc_proc(PowerPCCPU *cpu)
     PowerPCCPUClass *pcc = POWERPC_CPU_GET_CLASS(cpu);
     CPUPPCState *env = &cpu->env;
 #if !defined(CONFIG_USER_ONLY)
-    int i;
 
     env->irq_inputs = NULL;
-    /* Set all exception vectors to an invalid address */
-    for (i = 0; i < POWERPC_EXCP_NB; i++) {
-        env->excp_vectors[i] = (target_ulong)(-1ULL);
-    }
     env->ivor_mask = 0x00000000;
     env->ivpr_mask = 0x00000000;
     /* Default MMU definitions */

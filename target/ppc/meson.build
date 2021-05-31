@@ -30,6 +30,7 @@ ppc_softmmu_ss.add(files(
   'mmu-hash32.c',
   'mmu_helper.c',
   'monitor.c',
+  'interrupts.c',
 ))
 ppc_softmmu_ss.add(when: 'CONFIG_TCG', if_false: files(
   'tcg-stub.c'

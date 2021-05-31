@@ -115,7 +115,7 @@ static int cpu_load_old(QEMUFile *f, void *opaque, int version_id)
     qemu_get_be32s(f, &env->pending_interrupts);
     qemu_get_be32s(f, &env->irq_input_state);
     for (i = 0; i < POWERPC_EXCP_NB; i++) {
-        qemu_get_betls(f, &env->excp_vectors[i]);
+        qemu_get_betls(f, &env->entry_points[i].addr);
     }
     qemu_get_betls(f, &env->excp_prefix);
     qemu_get_betls(f, &env->ivor_mask);
