@@ -39,6 +39,17 @@ ppc_softmmu_ss.add(files(
   'mmu-hash32.c',
   'mmu_helper.c',
   'monitor.c',
+  'intr_model.c',
+  'intr_booke.c',
+  'intr_40x.c',
+  'intr_601.c',
+  'intr_602.c',
+  'intr_603.c',
+  'intr_5xx_8xx.c',
+  'intr_604.c',
+  'intr_g2.c',
+  'intr_74xx.c',
+  'intr_7xx.c',
 ))
 ppc_softmmu_ss.add(when: 'CONFIG_TCG', if_false: files(
   'tcg-stub.c'
@@ -49,6 +60,11 @@ ppc_softmmu_ss.add(when: 'TARGET_PPC64', if_true: files(
   'mmu-book3s-v3.c',
   'mmu-hash64.c',
   'mmu-radix64.c',
+  'intr_970.c',
+  'intr_power7.c',
+  'intr_power8.c',
+  'intr_power9.c',
+  'intr_power10.c',
 ))
 
 target_arch += {'ppc': ppc_ss}

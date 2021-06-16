@@ -175,6 +175,18 @@ enum {
     POWERPC_EXCP_TRAP          = 0x40,
 };
 
+/* Mutable interrupt model state. One per CPUPPCState */
+struct PPCIntrModel {
+    Object parent;
+};
+
+/* Immutable interrupt model attributes. One per interrupt model */
+struct PPCIntrModelClass {
+    ObjectClass parent_class;
+
+    int id;
+};
+
 #define PPC_INPUT(env) ((env)->bus_model)
 
 /*****************************************************************************/
@@ -1098,7 +1110,7 @@ struct CPUPPCState {
     /* CPU model definition */
     target_ulong msr_mask;
     powerpc_mmu_t mmu_model;
-    powerpc_excp_t excp_model;
+    PPCIntrModel intr_state;
     powerpc_input_t bus_model;
     int bfd_mach;
     uint32_t flags;

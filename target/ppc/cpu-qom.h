@@ -35,6 +35,7 @@ OBJECT_DECLARE_TYPE(PowerPCCPU, PowerPCCPUClass,
 typedef struct CPUPPCState CPUPPCState;
 typedef struct ppc_tb_t ppc_tb_t;
 typedef struct ppc_dcr_t ppc_dcr_t;
+typedef struct PPCIntrModel PPCIntrModel;
 
 /*****************************************************************************/
 /* MMU model                                                                 */
@@ -181,7 +182,7 @@ struct PowerPCCPUClass {
     uint64_t lpcr_mask;         /* Available bits in the LPCR */
     uint64_t lpcr_pm;           /* Power-saving mode Exit Cause Enable bits */
     powerpc_mmu_t   mmu_model;
-    powerpc_excp_t  excp_model;
+    const char *intr_model;
     powerpc_input_t bus_model;
     uint32_t flags;
     int bfd_mach;
