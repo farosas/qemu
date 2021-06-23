@@ -2129,475 +2129,6 @@ static void register_8xx_sprs(CPUPPCState *env)
  */
 
 /*****************************************************************************/
-/* Exception vectors models                                                  */
-static void init_excp_4xx_real(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_PIT]      = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_FIT]      = 0x00001010;
-    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00001020;
-    env->excp_vectors[POWERPC_EXCP_DEBUG]    = 0x00002000;
-    env->ivpr_mask = 0xFFFF0000UL;
-    /* Hardware reset vector */
-    env->hreset_vector = 0xFFFFFFFCUL;
-#endif
-}
-
-static void init_excp_4xx_softmmu(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_PIT]      = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_FIT]      = 0x00001010;
-    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00001020;
-    env->excp_vectors[POWERPC_EXCP_DTLB]     = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_ITLB]     = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_DEBUG]    = 0x00002000;
-    env->ivpr_mask = 0xFFFF0000UL;
-    /* Hardware reset vector */
-    env->hreset_vector = 0xFFFFFFFCUL;
-#endif
-}
-
-static void init_excp_MPC5xx(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_FPA]      = 0x00000E00;
-    env->excp_vectors[POWERPC_EXCP_EMUL]     = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DABR]     = 0x00001C00;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001C00;
-    env->excp_vectors[POWERPC_EXCP_MEXTBR]   = 0x00001E00;
-    env->excp_vectors[POWERPC_EXCP_NMEXTBR]  = 0x00001F00;
-    /* Hardware reset vector */
-    env->hreset_vector = 0x00000100UL;
-#endif
-}
-
-static void init_excp_MPC8xx(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_FPA]      = 0x00000E00;
-    env->excp_vectors[POWERPC_EXCP_EMUL]     = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_ITLB]     = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DTLB]     = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_ITLBE]    = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_DTLBE]    = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_DABR]     = 0x00001C00;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001C00;
-    env->excp_vectors[POWERPC_EXCP_MEXTBR]   = 0x00001E00;
-    env->excp_vectors[POWERPC_EXCP_NMEXTBR]  = 0x00001F00;
-    /* Hardware reset vector */
-    env->hreset_vector = 0x00000100UL;
-#endif
-}
-
-static void init_excp_G2(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000A00;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_IFTLB]    = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DLTLB]    = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DSTLB]    = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    /* Hardware reset vector */
-    env->hreset_vector = 0x00000100UL;
-#endif
-}
-
-static void init_excp_e200(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000FFC;
-    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_APU]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_FIT]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DTLB]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ITLB]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DEBUG]    = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_SPEU]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_EFPDI]    = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_EFPRI]    = 0x00000000;
-    env->ivor_mask = 0x0000FFF7UL;
-    env->ivpr_mask = 0xFFFF0000UL;
-    /* Hardware reset vector */
-    env->hreset_vector = 0xFFFFFFFCUL;
-#endif
-}
-
-static void init_excp_BookE(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_APU]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_FIT]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DTLB]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ITLB]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DEBUG]    = 0x00000000;
-    env->ivor_mask = 0x0000FFF0UL;
-    env->ivpr_mask = 0xFFFF0000UL;
-    /* Hardware reset vector */
-    env->hreset_vector = 0xFFFFFFFCUL;
-#endif
-}
-
-static void init_excp_601(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_IO]       = 0x00000A00;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_RUNM]     = 0x00002000;
-    /* Hardware reset vector */
-    env->hreset_vector = 0x00000100UL;
-#endif
-}
-
-static void init_excp_602(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    /* XXX: exception prefix has a special behavior on 602 */
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_IFTLB]    = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DLTLB]    = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DSTLB]    = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00001500;
-    env->excp_vectors[POWERPC_EXCP_EMUL]     = 0x00001600;
-    /* Hardware reset vector */
-    env->hreset_vector = 0x00000100UL;
-#endif
-}
-
-static void init_excp_603(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_IFTLB]    = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DLTLB]    = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DSTLB]    = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    /* Hardware reset vector */
-    env->hreset_vector = 0x00000100UL;
-#endif
-}
-
-static void init_excp_604(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    /* Hardware reset vector */
-    env->hreset_vector = 0x00000100UL;
-#endif
-}
-
-static void __init_excp_7xx(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-#endif
-}
-
-static void init_excp_7x0(CPUPPCState *env)
-{
-    __init_excp_7xx(env);
-
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_THERM]    = 0x00001700;
-#endif
-}
-
-static void init_excp_750cl(CPUPPCState *env)
-{
-    __init_excp_7xx(env);
-
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-#endif
-}
-
-static void init_excp_750cx(CPUPPCState *env)
-{
-    __init_excp_7xx(env);
-
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_THERM]    = 0x00001700;
-#endif
-}
-
-static void init_excp_7x5(CPUPPCState *env)
-{
-    __init_excp_7xx(env);
-
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_IFTLB]    = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DLTLB]    = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DSTLB]    = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_THERM]    = 0x00001700;
-#endif
-}
-
-static void init_excp_7400(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_VPU]      = 0x00000F20;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_VPUA]     = 0x00001600;
-    env->excp_vectors[POWERPC_EXCP_THERM]    = 0x00001700;
-    /* Hardware reset vector */
-    env->hreset_vector = 0x00000100UL;
-#endif
-}
-
-static void init_excp_7450(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_VPU]      = 0x00000F20;
-    env->excp_vectors[POWERPC_EXCP_IFTLB]    = 0x00001000;
-    env->excp_vectors[POWERPC_EXCP_DLTLB]    = 0x00001100;
-    env->excp_vectors[POWERPC_EXCP_DSTLB]    = 0x00001200;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_SMI]      = 0x00001400;
-    env->excp_vectors[POWERPC_EXCP_VPUA]     = 0x00001600;
-    /* Hardware reset vector */
-    env->hreset_vector = 0x00000100UL;
-#endif
-}
-
-#if defined(TARGET_PPC64)
-static void init_excp_970(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_DSEG]     = 0x00000380;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_ISEG]     = 0x00000480;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_HDECR]    = 0x00000980;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_VPU]      = 0x00000F20;
-    env->excp_vectors[POWERPC_EXCP_IABR]     = 0x00001300;
-    env->excp_vectors[POWERPC_EXCP_MAINT]    = 0x00001600;
-    env->excp_vectors[POWERPC_EXCP_VPUA]     = 0x00001700;
-    env->excp_vectors[POWERPC_EXCP_THERM]    = 0x00001800;
-    /* Hardware reset vector */
-    env->hreset_vector = 0x0000000000000100ULL;
-#endif
-}
-
-static void init_excp_POWER7(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000100;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000200;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000300;
-    env->excp_vectors[POWERPC_EXCP_DSEG]     = 0x00000380;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000400;
-    env->excp_vectors[POWERPC_EXCP_ISEG]     = 0x00000480;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000500;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000600;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000700;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000800;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000900;
-    env->excp_vectors[POWERPC_EXCP_HDECR]    = 0x00000980;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000C00;
-    env->excp_vectors[POWERPC_EXCP_TRACE]    = 0x00000D00;
-    env->excp_vectors[POWERPC_EXCP_HDSI]     = 0x00000E00;
-    env->excp_vectors[POWERPC_EXCP_HISI]     = 0x00000E20;
-    env->excp_vectors[POWERPC_EXCP_HV_EMU]   = 0x00000E40;
-    env->excp_vectors[POWERPC_EXCP_HV_MAINT] = 0x00000E60;
-    env->excp_vectors[POWERPC_EXCP_PERFM]    = 0x00000F00;
-    env->excp_vectors[POWERPC_EXCP_VPU]      = 0x00000F20;
-    env->excp_vectors[POWERPC_EXCP_VSXU]     = 0x00000F40;
-    /* Hardware reset vector */
-    env->hreset_vector = 0x0000000000000100ULL;
-#endif
-}
-
-static void init_excp_POWER8(CPUPPCState *env)
-{
-    init_excp_POWER7(env);
-
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_SDOOR]    = 0x00000A00;
-    env->excp_vectors[POWERPC_EXCP_FU]       = 0x00000F60;
-    env->excp_vectors[POWERPC_EXCP_HV_FU]    = 0x00000F80;
-    env->excp_vectors[POWERPC_EXCP_SDOOR_HV] = 0x00000E80;
-#endif
-}
-
-static void init_excp_POWER9(CPUPPCState *env)
-{
-    init_excp_POWER8(env);
-
-#if !defined(CONFIG_USER_ONLY)
-    env->excp_vectors[POWERPC_EXCP_HVIRT]    = 0x00000EA0;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL_VECTORED] = 0x00017000;
-#endif
-}
-
-static void init_excp_POWER10(CPUPPCState *env)
-{
-    init_excp_POWER9(env);
-}
-
-#endif
-
-/*****************************************************************************/
 /* Power management enable checks                                            */
 static int check_pow_none(CPUPPCState *env)
 {
@@ -2669,7 +2200,6 @@ static void init_proc_401(CPUPPCState *env)
     register_40x_sprs(env);
     register_401_403_sprs(env);
     register_401_sprs(env);
-    init_excp_4xx_real(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -2723,7 +2253,6 @@ static void init_proc_401x2(CPUPPCState *env)
     env->id_tlbs = 0;
     env->tlb_type = TLB_EMB;
 #endif
-    init_excp_4xx_softmmu(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -2775,7 +2304,6 @@ static void init_proc_401x3(CPUPPCState *env)
     register_401_sprs(env);
     register_401x2_sprs(env);
     register_compress_sprs(env);
-    init_excp_4xx_softmmu(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -2834,7 +2362,6 @@ static void init_proc_IOP480(CPUPPCState *env)
     env->id_tlbs = 0;
     env->tlb_type = TLB_EMB;
 #endif
-    init_excp_4xx_softmmu(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -2885,7 +2412,6 @@ static void init_proc_403(CPUPPCState *env)
     register_401_403_sprs(env);
     register_403_sprs(env);
     register_403_real_sprs(env);
-    init_excp_4xx_real(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -2951,7 +2477,6 @@ static void init_proc_403GCX(CPUPPCState *env)
     env->id_tlbs = 0;
     env->tlb_type = TLB_EMB;
 #endif
-    init_excp_4xx_softmmu(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -3017,7 +2542,6 @@ static void init_proc_405(CPUPPCState *env)
     env->id_tlbs = 0;
     env->tlb_type = TLB_EMB;
 #endif
-    init_excp_4xx_softmmu(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -3116,7 +2640,6 @@ static void init_proc_440EP(CPUPPCState *env)
     env->id_tlbs = 0;
     env->tlb_type = TLB_EMB;
 #endif
-    init_excp_BookE(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     ppc40x_irq_init(env_archcpu(env));
@@ -3240,7 +2763,6 @@ static void init_proc_440GP(CPUPPCState *env)
     env->id_tlbs = 0;
     env->tlb_type = TLB_EMB;
 #endif
-    init_excp_BookE(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* XXX: TODO: allocate internal IRQ controller */
@@ -3323,7 +2845,6 @@ static void init_proc_440x4(CPUPPCState *env)
     env->id_tlbs = 0;
     env->tlb_type = TLB_EMB;
 #endif
-    init_excp_BookE(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* XXX: TODO: allocate internal IRQ controller */
@@ -3424,7 +2945,6 @@ static void init_proc_440x5(CPUPPCState *env)
     env->id_tlbs = 0;
     env->tlb_type = TLB_EMB;
 #endif
-    init_excp_BookE(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     ppc40x_irq_init(env_archcpu(env));
@@ -3512,7 +3032,6 @@ static void init_proc_MPC5xx(CPUPPCState *env)
     register_tbl(env);
     register_5xx_8xx_sprs(env);
     register_5xx_sprs(env);
-    init_excp_MPC5xx(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* XXX: TODO: allocate internal IRQ controller */
@@ -3556,7 +3075,6 @@ static void init_proc_MPC8xx(CPUPPCState *env)
     register_tbl(env);
     register_5xx_8xx_sprs(env);
     register_8xx_sprs(env);
-    init_excp_MPC8xx(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* XXX: TODO: allocate internal IRQ controller */
@@ -3629,7 +3147,6 @@ static void init_proc_G2(CPUPPCState *env)
     register_low_BATs(env);
     register_high_BATs(env);
     register_6xx_7xx_soft_tlb(env, 64, 2);
-    init_excp_G2(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -3709,7 +3226,6 @@ static void init_proc_G2LE(CPUPPCState *env)
     register_low_BATs(env);
     register_high_BATs(env);
     register_6xx_7xx_soft_tlb(env, 64, 2);
-    init_excp_G2(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -3857,7 +3373,6 @@ static void init_proc_e200(CPUPPCState *env)
     env->id_tlbs = 0;
     env->tlb_type = TLB_EMB;
 #endif
-    init_excp_e200(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* XXX: TODO: allocate internal IRQ controller */
@@ -3964,7 +3479,6 @@ static void init_proc_e300(CPUPPCState *env)
     register_low_BATs(env);
     register_high_BATs(env);
     register_6xx_7xx_soft_tlb(env, 64, 2);
-    init_excp_603(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -4018,46 +3532,6 @@ enum fsl_e500_version {
     fsl_e5500,
     fsl_e6500,
 };
-
-static void init_excp_e500(CPUPPCState *env)
-{
-#if !defined(CONFIG_USER_ONLY)
-    ObjectClass *oc = object_class_by_name(TYPE_POWERPC_CPU);
-    PowerPCCPUClass *pcc = POWERPC_CPU_CLASS(oc);
-    uint64_t ivpr_mask = 0xFFFF0000ULL;
-
-    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000FFC;
-    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_APU]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_FIT]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DTLB]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_ITLB]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_DEBUG]    = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_SPEU]     = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_EFPDI]    = 0x00000000;
-    env->excp_vectors[POWERPC_EXCP_EFPRI]    = 0x00000000;
-
-    if (pcc->pvr == CPU_POWERPC_e5500 || pcc->pvr == CPU_POWERPC_e6500) {
-        ivpr_mask = (target_ulong)~0xFFFFULL;
-    }
-
-    env->ivor_mask = 0x0000FFF7UL;
-    env->ivpr_mask = ivpr_mask;
-
-    /* Hardware reset vector */
-    env->hreset_vector = 0xFFFFFFFCUL;
-#endif
-}
 
 static void init_proc_e500(CPUPPCState *env, int version)
 {
@@ -4275,7 +3749,6 @@ static void init_proc_e500(CPUPPCState *env, int version)
     }
 #endif
 
-    init_excp_e500(env);
     /* Allocate hardware IRQ controller */
     ppce500_irq_init(env_archcpu(env));
 }
@@ -4541,7 +4014,6 @@ static void init_proc_601(CPUPPCState *env)
                  &spr_read_generic, &spr_write_generic,
                  0x00000000);
     /* Memory management */
-    init_excp_601(env);
     /*
      * XXX: beware that dcache line size is 64
      *      but dcbz uses 32 bytes "sectors"
@@ -4652,7 +4124,6 @@ static void init_proc_602(CPUPPCState *env)
     /* Memory management */
     register_low_BATs(env);
     register_6xx_7xx_soft_tlb(env, 64, 2);
-    init_excp_602(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -4722,7 +4193,6 @@ static void init_proc_603(CPUPPCState *env)
     /* Memory management */
     register_low_BATs(env);
     register_6xx_7xx_soft_tlb(env, 64, 2);
-    init_excp_603(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -4822,7 +4292,6 @@ static void init_proc_604(CPUPPCState *env)
                  0x00000000);
     /* Memory management */
     register_low_BATs(env);
-    init_excp_604(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -4906,7 +4375,6 @@ static void init_proc_604E(CPUPPCState *env)
                  0x00000000);
     /* Memory management */
     register_low_BATs(env);
-    init_excp_604(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -4977,7 +4445,6 @@ static void init_proc_740(CPUPPCState *env)
                  0x00000000);
     /* Memory management */
     register_low_BATs(env);
-    init_excp_7x0(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -5057,7 +4524,6 @@ static void init_proc_750(CPUPPCState *env)
      * XXX: high BATs are also present but are known to be bugged on
      *      die version 1.x
      */
-    init_excp_7x0(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -5221,7 +4687,6 @@ static void init_proc_750cl(CPUPPCState *env)
     register_low_BATs(env);
     /* PowerPC 750cl has 8 DBATs and 8 IBATs */
     register_high_BATs(env);
-    init_excp_750cl(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -5343,7 +4808,6 @@ static void init_proc_750cx(CPUPPCState *env)
     register_low_BATs(env);
     /* PowerPC 750cx has 8 DBATs and 8 IBATs */
     register_high_BATs(env);
-    init_excp_750cx(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -5431,7 +4895,6 @@ static void init_proc_750fx(CPUPPCState *env)
     register_low_BATs(env);
     /* PowerPC 750fx & 750gx has 8 DBATs and 8 IBATs */
     register_high_BATs(env);
-    init_excp_7x0(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -5519,7 +4982,6 @@ static void init_proc_750gx(CPUPPCState *env)
     register_low_BATs(env);
     /* PowerPC 750fx & 750gx has 8 DBATs and 8 IBATs */
     register_high_BATs(env);
-    init_excp_7x0(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -5598,7 +5060,6 @@ static void init_proc_745(CPUPPCState *env)
     register_low_BATs(env);
     register_high_BATs(env);
     register_6xx_7xx_soft_tlb(env, 64, 2);
-    init_excp_7x5(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -5685,7 +5146,6 @@ static void init_proc_755(CPUPPCState *env)
     register_low_BATs(env);
     register_high_BATs(env);
     register_6xx_7xx_soft_tlb(env, 64, 2);
-    init_excp_7x5(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -5756,7 +5216,6 @@ static void init_proc_7400(CPUPPCState *env)
     register_thrm_sprs(env);
     /* Memory management */
     register_low_BATs(env);
-    init_excp_7400(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -5842,7 +5301,6 @@ static void init_proc_7410(CPUPPCState *env)
                  0x00000000);
     /* Memory management */
     register_low_BATs(env);
-    init_excp_7400(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -5954,7 +5412,6 @@ static void init_proc_7440(CPUPPCState *env)
     /* Memory management */
     register_low_BATs(env);
     register_74xx_soft_tlb(env, 128, 2);
-    init_excp_7450(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -6089,7 +5546,6 @@ static void init_proc_7450(CPUPPCState *env)
     /* Memory management */
     register_low_BATs(env);
     register_74xx_soft_tlb(env, 128, 2);
-    init_excp_7450(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -6227,7 +5683,6 @@ static void init_proc_7445(CPUPPCState *env)
     register_low_BATs(env);
     register_high_BATs(env);
     register_74xx_soft_tlb(env, 128, 2);
-    init_excp_7450(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -6367,7 +5822,6 @@ static void init_proc_7455(CPUPPCState *env)
     register_low_BATs(env);
     register_high_BATs(env);
     register_74xx_soft_tlb(env, 128, 2);
-    init_excp_7450(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -6531,7 +5985,6 @@ static void init_proc_7457(CPUPPCState *env)
     register_low_BATs(env);
     register_high_BATs(env);
     register_74xx_soft_tlb(env, 128, 2);
-    init_excp_7450(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -6670,7 +6123,6 @@ static void init_proc_e600(CPUPPCState *env)
     register_low_BATs(env);
     register_high_BATs(env);
     register_74xx_soft_tlb(env, 128, 2);
-    init_excp_7450(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* Allocate hardware IRQ controller */
@@ -7438,7 +6890,6 @@ static void init_proc_970(CPUPPCState *env)
     env->icache_line_size = 128;
 
     /* Allocate hardware IRQ controller */
-    init_excp_970(env);
     ppc970_irq_init(env_archcpu(env));
 }
 
@@ -7513,7 +6964,6 @@ static void init_proc_power5plus(CPUPPCState *env)
     env->icache_line_size = 128;
 
     /* Allocate hardware IRQ controller */
-    init_excp_970(env);
     ppc970_irq_init(env_archcpu(env));
 }
 
@@ -7594,7 +7044,6 @@ static void init_proc_POWER7(CPUPPCState *env)
     env->icache_line_size = 128;
 
     /* Allocate hardware IRQ controller */
-    init_excp_POWER7(env);
     ppcPOWER7_irq_init(env_archcpu(env));
 }
 
@@ -7753,7 +7202,6 @@ static void init_proc_POWER8(CPUPPCState *env)
     env->icache_line_size = 128;
 
     /* Allocate hardware IRQ controller */
-    init_excp_POWER8(env);
     ppcPOWER7_irq_init(env_archcpu(env));
 }
 
@@ -7959,7 +7407,6 @@ static void init_proc_POWER9(CPUPPCState *env)
     env->icache_line_size = 128;
 
     /* Allocate hardware IRQ controller */
-    init_excp_POWER9(env);
     ppcPOWER9_irq_init(env_archcpu(env));
 }
 
@@ -8170,7 +7617,6 @@ static void init_proc_POWER10(CPUPPCState *env)
     env->icache_line_size = 128;
 
     /* Allocate hardware IRQ controller */
-    init_excp_POWER10(env);
     ppcPOWER9_irq_init(env_archcpu(env));
 }
 
@@ -8346,16 +7792,9 @@ static void init_ppc_proc(PowerPCCPU *cpu)
 {
     PowerPCCPUClass *pcc = POWERPC_CPU_GET_CLASS(cpu);
     CPUPPCState *env = &cpu->env;
-#if !defined(CONFIG_USER_ONLY)
-    int i;
 
+#if !defined(CONFIG_USER_ONLY)
     env->irq_inputs = NULL;
-    /* Set all exception vectors to an invalid address */
-    for (i = 0; i < POWERPC_EXCP_NB; i++) {
-        env->excp_vectors[i] = (target_ulong)(-1ULL);
-    }
-    env->ivor_mask = 0x00000000;
-    env->ivpr_mask = 0x00000000;
     /* Default MMU definitions */
     env->nb_BATs = 0;
     env->nb_tlb = 0;
@@ -8875,9 +8314,14 @@ static void ppc_cpu_reset(DeviceState *dev)
     hreg_store_msr(env, msr, 1);
 
 #if !defined(CONFIG_USER_ONLY)
-    env->nip = env->hreset_vector | env->excp_prefix;
-    if (env->mmu_model != POWERPC_MMU_REAL) {
-        ppc_tlb_invalidate_all(env);
+    {
+        PPCIntrModel *im = &env->intr_state;
+        PPCIntrModelClass *imc = PPC_INTR_MODEL_GET_CLASS(im);
+
+        env->nip = imc->hreset_vector | im->excp_prefix;
+        if (env->mmu_model != POWERPC_MMU_REAL) {
+            ppc_tlb_invalidate_all(env);
+        }
     }
 #endif
 

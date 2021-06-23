@@ -320,7 +320,8 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp)
 {
     CPUState *cs = CPU(cpu);
     CPUPPCState *env = &cpu->env;
-    PPCIntrModelClass *intr_model = PPC_INTR_MODEL_GET_CLASS(&env->intr_state);
+    PPCIntrModel *intr_state = &env->intr_state;
+    PPCIntrModelClass *intr_model = PPC_INTR_MODEL_GET_CLASS(intr_state);
     target_ulong msr, new_msr, vector;
     int srr0, srr1, asrr0, asrr1, lev = -1;
     int excp_model;
@@ -883,13 +884,13 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp)
     }
 #endif
 
-    vector = env->excp_vectors[excp];
+    vector = intr_state->excp_vectors[excp];
     if (vector == (target_ulong)-1ULL) {
         cpu_abort(cs, "Raised an exception without defined vector %d\n",
                   excp);
     }
 
-    vector |= env->excp_prefix;
+    vector |= intr_state->excp_prefix;
 
     /* If any alternate SRR register are defined, duplicate saved values */
     if (asrr0 != -1) {

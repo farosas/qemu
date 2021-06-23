@@ -178,6 +178,11 @@ enum {
 /* Mutable interrupt model state. One per CPUPPCState */
 struct PPCIntrModel {
     Object parent;
+
+    target_ulong excp_prefix;
+    target_ulong ivor_mask;
+    target_ulong ivpr_mask;
+    target_ulong excp_vectors[POWERPC_EXCP_NB];
 };
 
 /* Immutable interrupt model attributes. One per interrupt model */
@@ -185,6 +190,7 @@ struct PPCIntrModelClass {
     ObjectClass parent_class;
 
     int id;
+    target_ulong hreset_vector;
 };
 
 #define PPC_INPUT(env) ((env)->bus_model)
@@ -1128,11 +1134,6 @@ struct CPUPPCState {
     uint32_t irq_input_state;
     void **irq_inputs;
 
-    target_ulong excp_vectors[POWERPC_EXCP_NB]; /* Exception vectors */
-    target_ulong excp_prefix;
-    target_ulong ivor_mask;
-    target_ulong ivpr_mask;
-    target_ulong hreset_vector;
     hwaddr mpic_iack;
     bool mpic_proxy;  /* true if the external proxy facility mode is enabled */
     bool has_hv_mode; /* set when the processor has an HV mode, thus HV priv */

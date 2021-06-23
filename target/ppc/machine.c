@@ -115,11 +115,11 @@ static int cpu_load_old(QEMUFile *f, void *opaque, int version_id)
     qemu_get_be32s(f, &env->pending_interrupts);
     qemu_get_be32s(f, &env->irq_input_state);
     for (i = 0; i < POWERPC_EXCP_NB; i++) {
-        qemu_get_betls(f, &env->excp_vectors[i]);
+        qemu_get_betls(f, &env->intr_state.excp_vectors[i]);
     }
-    qemu_get_betls(f, &env->excp_prefix);
-    qemu_get_betls(f, &env->ivor_mask);
-    qemu_get_betls(f, &env->ivpr_mask);
+    qemu_get_betls(f, &env->intr_state.excp_prefix);
+    qemu_get_betls(f, &env->intr_state.ivor_mask);
+    qemu_get_betls(f, &env->intr_state.ivpr_mask);
     qemu_get_betls(f, &env->nip);
     qemu_get_sbetl(f); /* Discard unused hflags */
     qemu_get_sbetl(f); /* Discard unused hflags_nmsr */

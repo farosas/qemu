@@ -1,9 +1,19 @@
 #include "qemu/osdep.h"
 #include "ppc_intr.h"
 
-
 static void ppc_intr_model_class_init(ObjectClass *oc, void *data)
 {
+}
+
+static void ppc_intr_model_post_init(Object *obj)
+{
+    PPCIntrModel *im = PPC_INTR_MODEL(obj);
+    int i;
+
+    /* Set all exception vectors to an invalid address */
+    for (i = 0; i < POWERPC_EXCP_NB; i++) {
+        im->excp_vectors[i] = (target_ulong)(-1ULL);
+    }
 }
 
 static const TypeInfo ppc_intr_model_info = {
@@ -11,6 +21,7 @@ static const TypeInfo ppc_intr_model_info = {
     .parent = TYPE_OBJECT,
     .class_size = sizeof(PPCIntrModelClass),
     .class_init = ppc_intr_model_class_init,
+    .instance_post_init = ppc_intr_model_post_init,
     .abstract = true,
 };
 

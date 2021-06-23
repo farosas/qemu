@@ -228,7 +228,7 @@ int hreg_store_msr(CPUPPCState *env, target_ulong value, int alter_hv)
     }
     if (unlikely((value >> MSR_EP) & 1) != msr_ep) {
         /* Change the exception prefix on PowerPC 601 */
-        env->excp_prefix = ((value >> MSR_EP) & 1) * 0xFFF00000;
+        env->intr_state.excp_prefix = ((value >> MSR_EP) & 1) * 0xFFF00000;
     }
     /*
      * If PR=1 then EE, IR and DR must be 1

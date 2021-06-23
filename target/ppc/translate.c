@@ -747,14 +747,17 @@ void spr_write_lpidr(DisasContext *ctx, int sprn, int gprn)
 
 void spr_read_hior(DisasContext *ctx, int gprn, int sprn)
 {
-    tcg_gen_ld_tl(cpu_gpr[gprn], cpu_env, offsetof(CPUPPCState, excp_prefix));
+    tcg_gen_ld_tl(cpu_gpr[gprn], cpu_env,
+                  (offsetof(CPUPPCState, intr_state) +
+                   offsetof(PPCIntrModel, excp_prefix)));
 }
 
 void spr_write_hior(DisasContext *ctx, int sprn, int gprn)
 {
     TCGv t0 = tcg_temp_new();
     tcg_gen_andi_tl(t0, cpu_gpr[gprn], 0x3FFFFF00000ULL);
-    tcg_gen_st_tl(t0, cpu_env, offsetof(CPUPPCState, excp_prefix));
+    tcg_gen_st_tl(t0, cpu_env, (offsetof(CPUPPCState, intr_state) +
+                                offsetof(PPCIntrModel, excp_prefix)));
     tcg_temp_free(t0);
 }
 void spr_write_ptcr(DisasContext *ctx, int sprn, int gprn)
@@ -924,9 +927,11 @@ void spr_write_spefscr(DisasContext *ctx, int sprn, int gprn)
 void spr_write_excp_prefix(DisasContext *ctx, int sprn, int gprn)
 {
     TCGv t0 = tcg_temp_new();
-    tcg_gen_ld_tl(t0, cpu_env, offsetof(CPUPPCState, ivpr_mask));
+    tcg_gen_ld_tl(t0, cpu_env, (offsetof(CPUPPCState, intr_state) +
+                                offsetof(PPCIntrModel, ivpr_mask)));
     tcg_gen_and_tl(t0, t0, cpu_gpr[gprn]);
-    tcg_gen_st_tl(t0, cpu_env, offsetof(CPUPPCState, excp_prefix));
+    tcg_gen_st_tl(t0, cpu_env, (offsetof(CPUPPCState, intr_state) +
+                                offsetof(PPCIntrModel, excp_prefix)));
     gen_store_spr(sprn, t0);
     tcg_temp_free(t0);
 }
@@ -949,9 +954,12 @@ void spr_write_excp_vector(DisasContext *ctx, int sprn, int gprn)
     }
 
     TCGv t0 = tcg_temp_new();
-    tcg_gen_ld_tl(t0, cpu_env, offsetof(CPUPPCState, ivor_mask));
+    tcg_gen_ld_tl(t0, cpu_env, (offsetof(CPUPPCState, intr_state) +
+                                offsetof(PPCIntrModel, ivor_mask)));
     tcg_gen_and_tl(t0, t0, cpu_gpr[gprn]);
-    tcg_gen_st_tl(t0, cpu_env, offsetof(CPUPPCState, excp_vectors[sprn_offs]));
+    tcg_gen_st_tl(t0, cpu_env,
+                  (offsetof(CPUPPCState, intr_state) +
+                   offsetof(PPCIntrModel, excp_vectors[sprn_offs])));
     gen_store_spr(sprn, t0);
     tcg_temp_free(t0);
 }
