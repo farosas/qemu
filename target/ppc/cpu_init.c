@@ -2254,7 +2254,7 @@ static void init_excp_G2(CPUPPCState *env)
 #endif
 }
 
-static void init_excp_e200(CPUPPCState *env, target_ulong ivpr_mask)
+static void init_excp_e200(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
     env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000FFC;
@@ -2278,7 +2278,7 @@ static void init_excp_e200(CPUPPCState *env, target_ulong ivpr_mask)
     env->excp_vectors[POWERPC_EXCP_EFPDI]    = 0x00000000;
     env->excp_vectors[POWERPC_EXCP_EFPRI]    = 0x00000000;
     env->ivor_mask = 0x0000FFF7UL;
-    env->ivpr_mask = ivpr_mask;
+    env->ivpr_mask = 0xFFFF0000UL;
     /* Hardware reset vector */
     env->hreset_vector = 0xFFFFFFFCUL;
 #endif
@@ -3896,7 +3896,7 @@ static void init_proc_e200(CPUPPCState *env)
     env->id_tlbs = 0;
     env->tlb_type = TLB_EMB;
 #endif
-    init_excp_e200(env, 0xFFFF0000UL);
+    init_excp_e200(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
     /* XXX: TODO: allocate internal IRQ controller */
@@ -4057,6 +4057,36 @@ enum fsl_e500_version {
     fsl_e5500,
     fsl_e6500,
 };
+
+static void init_excp_e500(CPUPPCState *env, target_ulong ivpr_mask)
+{
+#if !defined(CONFIG_USER_ONLY)
+    env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000FFC;
+    env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_DSI]      = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_ISI]      = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_EXTERNAL] = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_ALIGN]    = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_PROGRAM]  = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_FPU]      = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_SYSCALL]  = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_APU]      = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_DECR]     = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_FIT]      = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_WDT]      = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_DTLB]     = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_ITLB]     = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_DEBUG]    = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_SPEU]     = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_EFPDI]    = 0x00000000;
+    env->excp_vectors[POWERPC_EXCP_EFPRI]    = 0x00000000;
+    env->ivor_mask = 0x0000FFF7UL;
+    env->ivpr_mask = ivpr_mask;
+    /* Hardware reset vector */
+    env->hreset_vector = 0xFFFFFFFCUL;
+#endif
+}
 
 static void init_proc_e500(CPUPPCState *env, int version)
 {
@@ -4276,7 +4306,7 @@ static void init_proc_e500(CPUPPCState *env, int version)
     }
 #endif
 
-    init_excp_e200(env, ivpr_mask);
+    init_excp_e500(env, ivpr_mask);
     /* Allocate hardware IRQ controller */
     ppce500_irq_init(env_archcpu(env));
 }
