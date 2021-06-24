@@ -282,7 +282,7 @@ static void dcbz_common(CPUPPCState *env, target_ulong addr,
 
 #if defined(TARGET_PPC64)
     /* Check for dcbz vs dcbzl on 970 */
-    if (env->excp_model == POWERPC_EXCP_970 &&
+    if (env->bus_model == PPC_FLAGS_INPUT_970 &&
         !(opcode & 0x00200000) && ((env->spr[SPR_970_HID5] >> 7) & 0x3) == 1) {
         dcbz_size = 32;
     }
