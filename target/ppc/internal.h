@@ -223,7 +223,7 @@ void create_ppc_opcodes(PowerPCCPU *cpu, Error **errp);
 void destroy_ppc_opcodes(PowerPCCPU *cpu);
 
 /* gdbstub.c */
-void ppc_gdb_init(CPUState *cs, PowerPCCPUClass *ppc);
+void ppc_gdb_init(CPUState *cs, PowerPCCPU *cpu);
 gchar *ppc_gdb_arch_name(CPUState *cs);
 
 /**

@@ -329,9 +329,8 @@ int ppc_cpu_gdb_write_register_apple(CPUState *cs, uint8_t *mem_buf, int n)
 }
 
 #ifndef CONFIG_USER_ONLY
-void ppc_gdb_gen_spr_xml(PowerPCCPU *cpu)
+static void ppc_gdb_gen_spr_xml(PowerPCCPUClass *pcc, PowerPCCPU *cpu)
 {
-    PowerPCCPUClass *pcc = POWERPC_CPU_GET_CLASS(cpu);
     CPUPPCState *env = &cpu->env;
     GString *xml;
     char *spr_name;
@@ -621,8 +620,14 @@ gchar *ppc_gdb_arch_name(CPUState *cs)
 #endif
 }
 
-void ppc_gdb_init(CPUState *cs, PowerPCCPUClass *pcc)
+void ppc_gdb_init(CPUState *cs, PowerPCCPU *cpu)
 {
+    PowerPCCPUClass *pcc = POWERPC_CPU_GET_CLASS(cpu);
+
+#if !defined(CONFIG_USER_ONLY)
+    ppc_gdb_gen_spr_xml(pcc, cpu);
+#endif
+
     if (pcc->insns_flags & PPC_FLOAT) {
         gdb_register_coprocessor(cs, gdb_get_float_reg, gdb_set_float_reg,
                                  33, "power-fpu.xml", 0);

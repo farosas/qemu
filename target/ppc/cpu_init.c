@@ -8419,10 +8419,6 @@ static void init_ppc_proc(PowerPCCPU *cpu)
     /* PowerPC implementation specific initialisations (SPRs, timers, ...) */
     (*pcc->init_proc)(env);
 
-#if !defined(CONFIG_USER_ONLY)
-    ppc_gdb_gen_spr_xml(cpu);
-#endif
-
     /* MSR bits & flags consistency checks */
     if (env->msr_mask & (1 << 25)) {
         switch (env->flags & (POWERPC_FLAG_SPE | POWERPC_FLAG_VRE)) {
@@ -8572,7 +8568,7 @@ static void ppc_cpu_realize(DeviceState *dev, Error **errp)
     }
     init_ppc_proc(cpu);
 
-    ppc_gdb_init(cs, pcc);
+    ppc_gdb_init(cs, cpu);
     qemu_init_vcpu(cs);
 
     pcc->parent_realize(dev, errp);
