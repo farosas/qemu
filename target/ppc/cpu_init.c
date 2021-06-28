@@ -4058,9 +4058,13 @@ enum fsl_e500_version {
     fsl_e6500,
 };
 
-static void init_excp_e500(CPUPPCState *env, target_ulong ivpr_mask)
+static void init_excp_e500(CPUPPCState *env)
 {
 #if !defined(CONFIG_USER_ONLY)
+    ObjectClass *oc = object_class_by_name(TYPE_POWERPC_CPU);
+    PowerPCCPUClass *pcc = POWERPC_CPU_CLASS(oc);
+    uint64_t ivpr_mask = 0xFFFF0000ULL;
+
     env->excp_vectors[POWERPC_EXCP_RESET]    = 0x00000FFC;
     env->excp_vectors[POWERPC_EXCP_CRITICAL] = 0x00000000;
     env->excp_vectors[POWERPC_EXCP_MCHECK]   = 0x00000000;
@@ -4081,8 +4085,14 @@ static void init_excp_e500(CPUPPCState *env, target_ulong ivpr_mask)
     env->excp_vectors[POWERPC_EXCP_SPEU]     = 0x00000000;
     env->excp_vectors[POWERPC_EXCP_EFPDI]    = 0x00000000;
     env->excp_vectors[POWERPC_EXCP_EFPRI]    = 0x00000000;
+
+    if (pcc->pvr == CPU_POWERPC_e5500 || pcc->pvr == CPU_POWERPC_e6500) {
+        ivpr_mask = (target_ulong)~0xFFFFULL;
+    }
+
     env->ivor_mask = 0x0000FFF7UL;
     env->ivpr_mask = ivpr_mask;
+
     /* Hardware reset vector */
     env->hreset_vector = 0xFFFFFFFCUL;
 #endif
@@ -4092,7 +4102,6 @@ static void init_proc_e500(CPUPPCState *env, int version)
 {
     uint32_t tlbncfg[2];
     uint64_t ivor_mask;
-    uint64_t ivpr_mask = 0xFFFF0000ULL;
     uint32_t l1cfg0 = 0x3800  /* 8 ways */
                     | 0x0020; /* 32 kb */
     uint32_t l1cfg1 = 0x3800  /* 8 ways */
@@ -4279,7 +4288,6 @@ static void init_proc_e500(CPUPPCState *env, int version)
                      SPR_NOACCESS, SPR_NOACCESS,
                      &spr_read_mas73, &spr_write_mas73,
                      0x00000000);
-        ivpr_mask = (target_ulong)~0xFFFFULL;
     }
 
     if (version == fsl_e6500) {
@@ -4306,7 +4314,7 @@ static void init_proc_e500(CPUPPCState *env, int version)
     }
 #endif
 
-    init_excp_e500(env, ivpr_mask);
+    init_excp_e500(env);
     /* Allocate hardware IRQ controller */
     ppce500_irq_init(env_archcpu(env));
 }
