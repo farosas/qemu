@@ -100,10 +100,8 @@ enum powerpc_excp_t {
     POWERPC_EXCP_5xx_8xx,
     /* PowerPC 604 exception model      */
     POWERPC_EXCP_604,
-    /* PowerPC 7x0 exception model      */
-    POWERPC_EXCP_7x0,
-    /* PowerPC 7x5 exception model      */
-    POWERPC_EXCP_7x5,
+    /* PowerPC 7x0/7x5 exception model  */
+    POWERPC_EXCP_7xx,
     /* PowerPC 74xx exception model     */
     POWERPC_EXCP_74xx,
     /* BookE exception model            */

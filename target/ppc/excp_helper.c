@@ -701,7 +701,7 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp_model, int excp)
                 hreg_swap_gpr_tgpr(env);
             }
             /* fall through */
-        case POWERPC_EXCP_7x5:
+        case POWERPC_EXCP_7xx:
 #if defined(DEBUG_SOFTWARE_TLB)
             if (qemu_log_enabled()) {
                 const char *es;
