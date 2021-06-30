@@ -74,6 +74,7 @@ static int cap_one_reg;
 static int cap_epr;
 static int cap_ppc_watchdog;
 static int cap_papr;
+static int cap_papr_enabled;
 static int cap_htab_fd;
 static int cap_fixup_hcalls;
 static int cap_htm;             /* Hardware transactional memory support */
@@ -122,10 +123,7 @@ int kvm_arch_init(MachineState *ms, KVMState *s)
     cap_hior = kvm_check_extension(s, KVM_CAP_PPC_HIOR);
     cap_epr = kvm_check_extension(s, KVM_CAP_PPC_EPR);
     cap_ppc_watchdog = kvm_check_extension(s, KVM_CAP_PPC_BOOKE_WATCHDOG);
-    /*
-     * Note: we don't set cap_papr here, because this capability is
-     * only activated after this by kvmppc_set_papr()
-     */
+    cap_papr = kvm_check_extension(s, KVM_CAP_PPC_PAPR);
     cap_htab_fd = kvm_vm_check_extension(s, KVM_CAP_PPC_HTAB_FD);
     cap_fixup_hcalls = kvm_check_extension(s, KVM_CAP_PPC_FIXUP_HCALL);
     cap_ppc_smt = kvm_vm_check_extension(s, KVM_CAP_PPC_SMT);
@@ -991,7 +989,7 @@ int kvm_arch_put_registers(CPUState *cs, int level)
             kvm_set_one_reg(cs, KVM_REG_PPC_TM_TAR, &env->tm_tar);
         }
 
-        if (cap_papr) {
+        if (cap_papr_enabled) {
             if (kvm_put_vpa(cs) < 0) {
                 trace_kvm_failed_put_vpa();
             }
@@ -1299,7 +1297,7 @@ int kvm_arch_get_registers(CPUState *cs)
             kvm_get_one_reg(cs, KVM_REG_PPC_TM_TAR, &env->tm_tar);
         }
 
-        if (cap_papr) {
+        if (cap_papr_enabled) {
             if (kvm_get_vpa(cs) < 0) {
                 trace_kvm_failed_get_vpa();
             }
@@ -2059,7 +2057,7 @@ void kvmppc_set_papr(PowerPCCPU *cpu)
      * Update the capability flag so we sync the right information
      * with kvm
      */
-    cap_papr = 1;
+    cap_papr_enabled = 1;
 }
 
 int kvmppc_set_compat(PowerPCCPU *cpu, uint32_t compat_pvr)
