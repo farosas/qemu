@@ -169,12 +169,15 @@ static int kvm_arch_sync_sregs(PowerPCCPU *cpu)
 
     if (cenv->excp_model == POWERPC_EXCP_BOOKE) {
         /*
-         * What we're really trying to say is "if we're on BookE, we
-         * use the native PVR for now". This is the only sane way to
-         * check it though, so we potentially confuse users that they
-         * can run BookE guests on BookS. Let's hope nobody dares
-         * enough :)
+         * If we're on BookE, use the native PVR for now. But make
+         * sure nobody tries to run BookE on top of BookS.
          */
+        if (cap_papr) {
+            error_report("This host does not support BookE KVM guests,"
+                         " consider using -accel=tcg instead");
+            return -ENOTSUP;
+        }
+
         return 0;
     } else {
         if (!cap_segstate) {
