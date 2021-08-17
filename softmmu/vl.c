@@ -144,6 +144,12 @@ typedef struct ObjectOption {
     QTAILQ_ENTRY(ObjectOption) next;
 } ObjectOption;
 
+typedef struct ChardevOption {
+    ChardevOptions *opts;
+    Location loc;
+    QSIMPLEQ_ENTRY(ChardevOption) next;
+} ChardevOption;
+
 static const char *cpu_option;
 static const char *mem_path;
 static const char *incoming;
@@ -151,6 +157,8 @@ static const char *loadvm;
 static const char *accelerators;
 static QDict *machine_opts_dict;
 static QTAILQ_HEAD(, ObjectOption) object_opts = QTAILQ_HEAD_INITIALIZER(object_opts);
+static QSIMPLEQ_HEAD(, ChardevOption) chardev_opts =
+    QSIMPLEQ_HEAD_INITIALIZER(chardev_opts);
 static ram_addr_t maxram_size;
 static uint64_t ram_slots;
 static int display_remote;
@@ -1205,18 +1213,18 @@ static int device_init_func(void *opaque, QemuOpts *opts, Error **errp)
     return 0;
 }
 
-static int chardev_init_func(void *opaque, QemuOpts *opts, Error **errp)
+static void chardev_option_foreach_add(void)
 {
-    Error *local_err = NULL;
 
-    if (!qemu_chr_new_from_opts(opts, NULL, &local_err)) {
-        if (local_err) {
-            error_propagate(errp, local_err);
-            return -1;
-        }
-        exit(0);
+    while (!QSIMPLEQ_EMPTY(&chardev_opts)) {
+        ChardevOption *opt = QSIMPLEQ_FIRST(&chardev_opts);
+        QSIMPLEQ_REMOVE_HEAD(&chardev_opts, next);
+        loc_push_restore(&opt->loc);
+        qemu_chr_new_cli(opt->opts, &error_fatal);
+        loc_pop(&opt->loc);
+        qapi_free_ChardevOptions(opt->opts);
+        g_free(opt);
     }
-    return 0;
 }
 
 #ifdef CONFIG_VIRTFS
@@ -1241,6 +1249,8 @@ static void monitor_parse(const char *optarg, const char *mode, bool pretty)
     if (strstart(optarg, "chardev:", &p)) {
         snprintf(label, sizeof(label), "%s", p);
     } else {
+        ChardevOption *opt;
+
         snprintf(label, sizeof(label), "compat_monitor%d",
                  monitor_device_index);
         opts = qemu_chr_parse_compat(label, optarg, true);
@@ -1248,6 +1258,12 @@ static void monitor_parse(const char *optarg, const char *mode, bool pretty)
             error_report("parse error: %s", optarg);
             exit(1);
         }
+
+        opt = g_new(ChardevOption, 1);
+        opt->opts = qemu_chr_parse_cli_dict(qemu_opts_to_qdict(opts, NULL),
+                                            false, false, &error_fatal);
+        loc_save(&opt->loc);
+        QSIMPLEQ_INSERT_TAIL(&chardev_opts, opt, next);
     }
 
     opts = qemu_opts_create(qemu_find_opts("mon"), label, 1, &error_fatal);
@@ -1935,8 +1951,7 @@ static void qemu_create_early_backends(void)
     /* spice must initialize before chardevs (for spicevmc and spiceport) */
     qemu_spice.init();
 
-    qemu_opts_foreach(qemu_find_opts("chardev"),
-                      chardev_init_func, NULL, &error_fatal);
+    chardev_option_foreach_add();
 
 #ifdef CONFIG_VIRTFS
     qemu_opts_foreach(qemu_find_opts("fsdev"),
@@ -2175,6 +2190,7 @@ static int global_init_func(void *opaque, QemuOpts *opts, Error **errp)
 static bool is_qemuopts_group(const char *group)
 {
     if (g_str_equal(group, "object") ||
+        g_str_equal(group, "chardev") ||
         g_str_equal(group, "machine") ||
         g_str_equal(group, "smp-opts")) {
         return false;
@@ -2189,6 +2205,12 @@ static void qemu_record_config_group(const char *group, QDict *dict,
         Visitor *v = qobject_input_visitor_new_keyval(QOBJECT(dict));
         object_option_add_visitor(v);
         visit_free(v);
+    } else if (g_str_equal(group, "chardev")) {
+        ChardevOption *opt = g_new(ChardevOption, 1);
+        opt->opts = qemu_chr_parse_cli_dict(dict, false, from_json,
+                                            &error_fatal);
+        loc_save(&opt->loc);
+        QSIMPLEQ_INSERT_TAIL(&chardev_opts, opt, next);
     } else if (g_str_equal(group, "machine")) {
         /*
          * Cannot merge string-valued and type-safe dictionaries, so JSON
@@ -3110,12 +3132,19 @@ void qemu_init(int argc, char **argv, char **envp)
                 default_monitor = 0;
                 break;
             case QEMU_OPTION_chardev:
-                opts = qemu_opts_parse_noisily(qemu_find_opts("chardev"),
-                                               optarg, true);
-                if (!opts) {
-                    exit(1);
+                {
+                    ChardevOption *opt;
+
+                    opt = g_new(ChardevOption, 1);
+                    opt->opts = qemu_chr_parse_cli_str(optarg, &error_fatal);
+                    if (!opt->opts) {
+                        /* Help was printed */
+                        exit(EXIT_SUCCESS);
+                    }
+                    loc_save(&opt->loc);
+                    QSIMPLEQ_INSERT_TAIL(&chardev_opts, opt, next);
+                    break;
                 }
-                break;
             case QEMU_OPTION_fsdev:
                 olist = qemu_find_opts("fsdev");
                 if (!olist) {
