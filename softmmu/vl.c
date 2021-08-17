@@ -1250,18 +1250,18 @@ static void monitor_parse(const char *optarg, const char *mode, bool pretty)
         snprintf(label, sizeof(label), "%s", p);
     } else {
         ChardevOption *opt;
+        ChardevOptions *chr_options;
 
         snprintf(label, sizeof(label), "compat_monitor%d",
                  monitor_device_index);
-        opts = qemu_chr_parse_compat(label, optarg, true);
-        if (!opts) {
+        chr_options = qemu_chr_parse_compat(label, optarg, true);
+        if (!chr_options) {
             error_report("parse error: %s", optarg);
             exit(1);
         }
 
         opt = g_new(ChardevOption, 1);
-        opt->opts = qemu_chr_parse_cli_dict(qemu_opts_to_qdict(opts, NULL),
-                                            false, false, &error_fatal);
+        opt->opts = chr_options;
         loc_save(&opt->loc);
         QSIMPLEQ_INSERT_TAIL(&chardev_opts, opt, next);
     }

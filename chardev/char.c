@@ -46,6 +46,10 @@
 
 #include "chardev-internal.h"
 
+static Chardev *qemu_chr_new_cli_gcontext(ChardevOptions *options,
+                                          GMainContext *context,
+                                          Error **errp);
+
 /***********************************************************/
 /* character device */
 
@@ -341,35 +345,33 @@ int qemu_chr_wait_connected(Chardev *chr, Error **errp)
     return 0;
 }
 
-QemuOpts *qemu_chr_parse_compat(const char *label, const char *filename,
-                                bool permit_mux_mon)
+ChardevOptions *qemu_chr_parse_compat(const char *label, const char *filename,
+                                      bool permit_mux_mon)
 {
     char host[65], port[33], width[8], height[8];
     int pos;
     const char *p;
-    QemuOpts *opts;
+    ChardevOptions *chr_options = NULL;
+    QDict *opts;
     Error *local_err = NULL;
 
-    opts = qemu_opts_create(qemu_find_opts("chardev"), label, 1, &local_err);
-    if (local_err) {
-        error_report_err(local_err);
-        return NULL;
-    }
+    opts = qdict_new();
+    qdict_put_str(opts, "id", label);
 
     if (strstart(filename, "mon:", &p)) {
         if (!permit_mux_mon) {
             error_report("mon: isn't supported in this context");
-            return NULL;
+            goto fail;
         }
         filename = p;
-        qemu_opt_set(opts, "mux", "on", &error_abort);
+        qdict_put_str(opts, "mux", "on");
         if (strcmp(filename, "stdio") == 0) {
             /* Monitor is muxed to stdio: do not exit on Ctrl+C by default
              * but pass it to the guest.  Handle this only for compat syntax,
              * for -chardev syntax we have special option for this.
              * This is what -nographic did, redirecting+muxing serial+monitor
              * to stdio causing Ctrl+C to be passed to guest. */
-            qemu_opt_set(opts, "signal", "off", &error_abort);
+            qdict_put_str(opts, "signal", "off");
         }
     }
 
@@ -380,44 +382,44 @@ QemuOpts *qemu_chr_parse_compat(const char *label, const char *filename,
         strcmp(filename, "braille") == 0 ||
         strcmp(filename, "testdev") == 0 ||
         strcmp(filename, "stdio")   == 0) {
-        qemu_opt_set(opts, "backend", filename, &error_abort);
-        return opts;
+        qdict_put_str(opts, "backend", filename);
+        goto create;
     }
     if (strstart(filename, "vc", &p)) {
-        qemu_opt_set(opts, "backend", "vc", &error_abort);
+        qdict_put_str(opts, "backend", "vc");
         if (*p == ':') {
             if (sscanf(p+1, "%7[0-9]x%7[0-9]", width, height) == 2) {
                 /* pixels */
-                qemu_opt_set(opts, "width", width, &error_abort);
-                qemu_opt_set(opts, "height", height, &error_abort);
+                qdict_put_str(opts, "width", width);
+                qdict_put_str(opts, "height", height);
             } else if (sscanf(p+1, "%7[0-9]Cx%7[0-9]C", width, height) == 2) {
                 /* chars */
-                qemu_opt_set(opts, "cols", width, &error_abort);
-                qemu_opt_set(opts, "rows", height, &error_abort);
+                qdict_put_str(opts, "cols", width);
+                qdict_put_str(opts, "rows", height);
             } else {
                 goto fail;
             }
         }
-        return opts;
+        goto create;
     }
     if (strcmp(filename, "con:") == 0) {
-        qemu_opt_set(opts, "backend", "console", &error_abort);
-        return opts;
+        qdict_put_str(opts, "backend", "console");
+        goto create;
     }
     if (strstart(filename, "COM", NULL)) {
-        qemu_opt_set(opts, "backend", "serial", &error_abort);
-        qemu_opt_set(opts, "path", filename, &error_abort);
-        return opts;
+        qdict_put_str(opts, "backend", "serial");
+        qdict_put_str(opts, "path", filename);
+        goto create;
     }
     if (strstart(filename, "file:", &p)) {
-        qemu_opt_set(opts, "backend", "file", &error_abort);
-        qemu_opt_set(opts, "path", p, &error_abort);
-        return opts;
+        qdict_put_str(opts, "backend", "file");
+        qdict_put_str(opts, "path", p);
+        goto create;
     }
     if (strstart(filename, "pipe:", &p)) {
-        qemu_opt_set(opts, "backend", "pipe", &error_abort);
-        qemu_opt_set(opts, "path", p, &error_abort);
-        return opts;
+        qdict_put_str(opts, "backend", "pipe");
+        qdict_put_str(opts, "path", p);
+        goto create;
     }
     if (strstart(filename, "tcp:", &p) ||
         strstart(filename, "telnet:", &p) ||
@@ -428,34 +430,34 @@ QemuOpts *qemu_chr_parse_compat(const char *label, const char *filename,
             if (sscanf(p, ":%32[^,]%n", port, &pos) < 1)
                 goto fail;
         }
-        qemu_opt_set(opts, "backend", "socket", &error_abort);
-        qemu_opt_set(opts, "host", host, &error_abort);
-        qemu_opt_set(opts, "port", port, &error_abort);
+        qdict_put_str(opts, "backend", "socket");
+        qdict_put_str(opts, "host", host);
+        qdict_put_str(opts, "port", port);
         if (p[pos] == ',') {
-            if (!qemu_opts_do_parse(opts, p + pos + 1, NULL, &local_err)) {
+            if (!keyval_parse_into(opts, p + pos + 1, NULL, NULL, &local_err)) {
                 error_report_err(local_err);
                 goto fail;
             }
         }
         if (strstart(filename, "telnet:", &p)) {
-            qemu_opt_set(opts, "telnet", "on", &error_abort);
+            qdict_put_str(opts, "telnet", "on");
         } else if (strstart(filename, "tn3270:", &p)) {
-            qemu_opt_set(opts, "tn3270", "on", &error_abort);
+            qdict_put_str(opts, "tn3270", "on");
         } else if (strstart(filename, "websocket:", &p)) {
-            qemu_opt_set(opts, "websocket", "on", &error_abort);
+            qdict_put_str(opts, "websocket", "on");
         }
-        return opts;
+        goto create;
     }
     if (strstart(filename, "udp:", &p)) {
-        qemu_opt_set(opts, "backend", "udp", &error_abort);
+        qdict_put_str(opts, "backend", "udp");
         if (sscanf(p, "%64[^:]:%32[^@,]%n", host, port, &pos) < 2) {
             host[0] = 0;
             if (sscanf(p, ":%32[^@,]%n", port, &pos) < 1) {
                 goto fail;
             }
         }
-        qemu_opt_set(opts, "host", host, &error_abort);
-        qemu_opt_set(opts, "port", port, &error_abort);
+        qdict_put_str(opts, "host", host);
+        qdict_put_str(opts, "port", port);
         if (p[pos] == '@') {
             p += pos + 1;
             if (sscanf(p, "%64[^:]:%32[^,]%n", host, port, &pos) < 2) {
@@ -464,36 +466,43 @@ QemuOpts *qemu_chr_parse_compat(const char *label, const char *filename,
                     goto fail;
                 }
             }
-            qemu_opt_set(opts, "localaddr", host, &error_abort);
-            qemu_opt_set(opts, "localport", port, &error_abort);
+            qdict_put_str(opts, "localaddr", host);
+            qdict_put_str(opts, "localport", port);
         }
-        return opts;
+        goto create;
     }
     if (strstart(filename, "unix:", &p)) {
-        qemu_opt_set(opts, "backend", "socket", &error_abort);
-        if (!qemu_opts_do_parse(opts, p, "path", &local_err)) {
+        qdict_put_str(opts, "backend", "socket");
+        if (!keyval_parse_into(opts, p, "path", NULL, &local_err)) {
             error_report_err(local_err);
             goto fail;
         }
-        return opts;
+        goto create;
     }
     if (strstart(filename, "/dev/parport", NULL) ||
         strstart(filename, "/dev/ppi", NULL)) {
-        qemu_opt_set(opts, "backend", "parallel", &error_abort);
-        qemu_opt_set(opts, "path", filename, &error_abort);
-        return opts;
+        qdict_put_str(opts, "backend", "parallel");
+        qdict_put_str(opts, "path", filename);
+        goto create;
     }
     if (strstart(filename, "/dev/", NULL)) {
-        qemu_opt_set(opts, "backend", "serial", &error_abort);
-        qemu_opt_set(opts, "path", filename, &error_abort);
-        return opts;
+        qdict_put_str(opts, "backend", "serial");
+        qdict_put_str(opts, "path", filename);
+        goto create;
     }
 
     error_report("'%s' is not a valid char driver", filename);
+    goto fail;
 
+create:
+    chr_options = qemu_chr_parse_cli_dict(opts, false, false, &local_err);
+    if (!chr_options) {
+        error_report_err(local_err);
+        goto fail;
+    }
 fail:
-    qemu_opts_del(opts);
-    return NULL;
+    qobject_unref(opts);
+    return chr_options;
 }
 
 static const ChardevClass *char_get_class(const char *driver, Error **errp)
@@ -627,7 +636,7 @@ Chardev *qemu_chr_new_noreplay(const char *label, const char *filename,
 {
     const char *p;
     Chardev *chr;
-    QemuOpts *opts;
+    ChardevOptions *opts;
     Error *err = NULL;
 
     if (strstart(filename, "chardev:", &p)) {
@@ -635,16 +644,17 @@ Chardev *qemu_chr_new_noreplay(const char *label, const char *filename,
     }
 
     opts = qemu_chr_parse_compat(label, filename, permit_mux_mon);
-    if (!opts)
+    if (!opts) {
         return NULL;
+    }
 
-    chr = qemu_chr_new_from_opts(opts, context, &err);
+    chr = qemu_chr_new_cli_gcontext(opts, context, &err);
     if (!chr) {
         error_report_err(err);
         goto out;
     }
 
-    if (qemu_opt_get_bool(opts, "mux", 0)) {
+    if (opts->has_mux && opts->mux) {
         assert(permit_mux_mon);
         monitor_init_hmp(chr, true, &err);
         if (err) {
@@ -656,7 +666,7 @@ Chardev *qemu_chr_new_noreplay(const char *label, const char *filename,
     }
 
 out:
-    qemu_opts_del(opts);
+    qapi_free_ChardevOptions(opts);
     return chr;
 }
 
