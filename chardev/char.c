@@ -1037,6 +1037,12 @@ ChardevReturn *qmp_chardev_add(const char *id, ChardevBackend *backend,
         error_setg(errp, "Chardev with id '%s' already exists", id);
         return NULL;
     }
+    if (!id_wellformed(id)) {
+        error_setg(errp, QERR_INVALID_PARAMETER_VALUE, "id", "an identifier");
+        error_append_hint(errp, "Identifiers consist of letters, digits, "
+                          "'-', '.', '_', starting with a letter.\n");
+        return NULL;
+    }
 
     cc = char_get_class(ChardevBackendKind_str(backend->type), errp);
     if (!cc) {
