@@ -73,21 +73,6 @@ struct Chardev {
 };
 
 /**
- * qemu_chr_new_from_opts:
- * @opts: see qemu-config.c for a list of valid options
- * @context: the #GMainContext to be used at initialization time
- *
- * Create a new character backend from a QemuOpts list.
- *
- * Returns: on success: a new character backend
- *          otherwise:  NULL; @errp specifies the error
- *                            or left untouched in case of help option
- */
-Chardev *qemu_chr_new_from_opts(QemuOpts *opts,
-                                GMainContext *context,
-                                Error **errp);
-
-/**
  * qemu_chr_new_cli:
  * @options: Character device creation options as defined in QAPI
  *

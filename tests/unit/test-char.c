@@ -80,19 +80,16 @@ static void fe_event(void *opaque, QEMUChrEvent event)
 #ifdef _WIN32
 static void char_console_test_subprocess(void)
 {
-    QemuOpts *opts;
+    ChardevOptions *opts;
     Chardev *chr;
 
-    opts = qemu_opts_create(qemu_find_opts("chardev"), "console-label",
-                            1, &error_abort);
-    qemu_opt_set(opts, "backend", "console", &error_abort);
-
-    chr = qemu_chr_new_from_opts(opts, NULL, NULL);
+    opts = qemu_chr_parse_cli_str("console,id=console-label", &error_abort);
+    chr = qemu_chr_new_cli(opts, &error_abort);
     g_assert_nonnull(chr);
 
     qemu_chr_write_all(chr, (const uint8_t *)"CONSOLE", 7);
 
-    qemu_opts_del(opts);
+    qapi_free_ChardevOptions(opts);
     object_unparent(OBJECT(chr));
 }
 
@@ -129,28 +126,23 @@ static void char_stdio_test(void)
 
 static void char_ringbuf_test(void)
 {
-    QemuOpts *opts;
+    ChardevOptions *opts;
     Chardev *chr;
     CharBackend be;
     char *data;
     int ret;
 
-    opts = qemu_opts_create(qemu_find_opts("chardev"), "ringbuf-label",
-                            1, &error_abort);
-    qemu_opt_set(opts, "backend", "ringbuf", &error_abort);
-
-    qemu_opt_set(opts, "size", "5", &error_abort);
-    chr = qemu_chr_new_from_opts(opts, NULL, NULL);
+    opts = qemu_chr_parse_cli_str("ringbuf,id=ringbuf-label,size=5",
+                                  &error_abort);
+    chr = qemu_chr_new_cli(opts, NULL);
     g_assert_null(chr);
-    qemu_opts_del(opts);
+    qapi_free_ChardevOptions(opts);
 
-    opts = qemu_opts_create(qemu_find_opts("chardev"), "ringbuf-label",
-                            1, &error_abort);
-    qemu_opt_set(opts, "backend", "ringbuf", &error_abort);
-    qemu_opt_set(opts, "size", "2", &error_abort);
-    chr = qemu_chr_new_from_opts(opts, NULL, &error_abort);
+    opts = qemu_chr_parse_cli_str("ringbuf,id=ringbuf-label,size=2",
+                                  &error_abort);
+    chr = qemu_chr_new_cli(opts, &error_abort);
     g_assert_nonnull(chr);
-    qemu_opts_del(opts);
+    qapi_free_ChardevOptions(opts);
 
     qemu_chr_fe_init(&be, chr, &error_abort);
     ret = qemu_chr_fe_write(&be, (void *)"buff", 4);
@@ -167,32 +159,27 @@ static void char_ringbuf_test(void)
     qemu_chr_fe_deinit(&be, true);
 
     /* check alias */
-    opts = qemu_opts_create(qemu_find_opts("chardev"), "memory-label",
-                            1, &error_abort);
-    qemu_opt_set(opts, "backend", "memory", &error_abort);
-    qemu_opt_set(opts, "size", "2", &error_abort);
-    chr = qemu_chr_new_from_opts(opts, NULL, NULL);
+    opts = qemu_chr_parse_cli_str("memory,id=memory-label,size=2",
+                                  &error_abort);
+    chr = qemu_chr_new_cli(opts, &error_abort);
     g_assert_nonnull(chr);
     object_unparent(OBJECT(chr));
-    qemu_opts_del(opts);
+    qapi_free_ChardevOptions(opts);
 }
 
 static void char_mux_test(void)
 {
-    QemuOpts *opts;
+    ChardevOptions *opts;
     Chardev *chr, *base;
     char *data;
     FeHandler h1 = { 0, false, 0, false, }, h2 = { 0, false, 0, false, };
     CharBackend chr_be1, chr_be2;
 
-    opts = qemu_opts_create(qemu_find_opts("chardev"), "mux-label",
-                            1, &error_abort);
-    qemu_opt_set(opts, "backend", "ringbuf", &error_abort);
-    qemu_opt_set(opts, "size", "128", &error_abort);
-    qemu_opt_set(opts, "mux", "on", &error_abort);
-    chr = qemu_chr_new_from_opts(opts, NULL, &error_abort);
+    opts = qemu_chr_parse_cli_str("ringbuf,id=mux-label,size=128,mux=on",
+                                  &error_abort);
+    chr = qemu_chr_new_cli(opts, &error_abort);
     g_assert_nonnull(chr);
-    qemu_opts_del(opts);
+    qapi_free_ChardevOptions(opts);
 
     qemu_chr_fe_init(&chr_be1, chr, &error_abort);
     qemu_chr_fe_set_handlers(&chr_be1,
@@ -776,7 +763,7 @@ static void char_socket_server_test(gconstpointer opaque)
     int ret;
     bool reconnected = false;
     char *optstr;
-    QemuOpts *opts;
+    ChardevOptions *opts;
 
     g_setenv("QTEST_SILENT_ERRORS", "1", 1);
     /*
@@ -790,11 +777,10 @@ static void char_socket_server_test(gconstpointer opaque)
                                          config->fd_pass,
                                          NULL,
                                          true);
-    opts = qemu_opts_parse_noisily(qemu_find_opts("chardev"),
-                                   optstr, true);
+    opts = qemu_chr_parse_cli_str(optstr, &error_abort);
     g_assert_nonnull(opts);
-    chr = qemu_chr_new_from_opts(opts, NULL, &error_abort);
-    qemu_opts_del(opts);
+    chr = qemu_chr_new_cli(opts, &error_abort);
+    qapi_free_ChardevOptions(opts);
     g_assert_nonnull(chr);
     g_assert(!object_property_get_bool(OBJECT(chr), "connected", &error_abort));
 
@@ -910,7 +896,7 @@ static void char_socket_client_dupid_test(gconstpointer opaque)
     char *optstr;
     Chardev *chr1, *chr2;
     SocketAddress *addr;
-    QemuOpts *opts;
+    ChardevOptions *opts;
     Error *local_err = NULL;
 
     /*
@@ -932,19 +918,18 @@ static void char_socket_client_dupid_test(gconstpointer opaque)
                                          config->reconnect,
                                          false);
 
-    opts = qemu_opts_parse_noisily(qemu_find_opts("chardev"),
-                                   optstr, true);
+    opts = qemu_chr_parse_cli_str(optstr, &error_abort);
     g_assert_nonnull(opts);
-    chr1 = qemu_chr_new_from_opts(opts, NULL, &error_abort);
+    chr1 = qemu_chr_new_cli(opts, &error_abort);
     g_assert_nonnull(chr1);
     qemu_chr_wait_connected(chr1, &error_abort);
 
-    chr2 = qemu_chr_new_from_opts(opts, NULL, &local_err);
+    chr2 = qemu_chr_new_cli(opts, &local_err);
     g_assert_null(chr2);
     error_free_or_abort(&local_err);
 
     object_unref(OBJECT(ioc));
-    qemu_opts_del(opts);
+    qapi_free_ChardevOptions(opts);
     object_unparent(OBJECT(chr1));
     qapi_free_SocketAddress(addr);
     g_free(optstr);
@@ -963,7 +948,7 @@ static void char_socket_client_test(gconstpointer opaque)
     QemuThread thread;
     int ret;
     bool reconnected = false;
-    QemuOpts *opts;
+    ChardevOptions *opts;
 
     /*
      * Setup a listener socket and determine get its address
@@ -992,11 +977,10 @@ static void char_socket_client_test(gconstpointer opaque)
                                          config->reconnect,
                                          false);
 
-    opts = qemu_opts_parse_noisily(qemu_find_opts("chardev"),
-                                   optstr, true);
+    opts = qemu_chr_parse_cli_str(optstr, &error_abort);
     g_assert_nonnull(opts);
-    chr = qemu_chr_new_from_opts(opts, NULL, &error_abort);
-    qemu_opts_del(opts);
+    chr = qemu_chr_new_cli(opts, &error_abort);
+    qapi_free_ChardevOptions(opts);
     g_assert_nonnull(chr);
 
     if (config->reconnect) {
@@ -1108,7 +1092,7 @@ static void char_socket_server_two_clients_test(gconstpointer opaque)
     SocketAddress *addr;
     Visitor *v;
     char *optstr;
-    QemuOpts *opts;
+    ChardevOptions *opts;
     QIOChannelSocket *ioc1, *ioc2;
     int closed = 0;
 
@@ -1124,11 +1108,10 @@ static void char_socket_server_two_clients_test(gconstpointer opaque)
                                          false,
                                          NULL,
                                          true);
-    opts = qemu_opts_parse_noisily(qemu_find_opts("chardev"),
-                                   optstr, true);
+    opts = qemu_chr_parse_cli_str(optstr, &error_abort);
     g_assert_nonnull(opts);
-    chr = qemu_chr_new_from_opts(opts, NULL, &error_abort);
-    qemu_opts_del(opts);
+    chr = qemu_chr_new_cli(opts, &error_abort);
+    qapi_free_ChardevOptions(opts);
     g_assert_nonnull(chr);
     g_assert(!object_property_get_bool(OBJECT(chr), "connected", &error_abort));
 
@@ -1186,20 +1169,17 @@ static void char_socket_server_two_clients_test(gconstpointer opaque)
 #if defined(HAVE_CHARDEV_SERIAL) && !defined(WIN32)
 static void char_serial_test(void)
 {
-    QemuOpts *opts;
+    ChardevOptions *opts;
     Chardev *chr;
 
-    opts = qemu_opts_create(qemu_find_opts("chardev"), "serial-id",
-                            1, &error_abort);
-    qemu_opt_set(opts, "backend", "serial", &error_abort);
-    qemu_opt_set(opts, "path", "/dev/null", &error_abort);
-
-    chr = qemu_chr_new_from_opts(opts, NULL, NULL);
+    opts = qemu_chr_parse_cli_str("serial,id=serial-id,path=/dev/null",
+                                  &error_abort);
+    chr = qemu_chr_new_cli(opts, &error_abort);
     g_assert_nonnull(chr);
     /* TODO: add more tests with a pty */
     object_unparent(OBJECT(chr));
 
-    qemu_opts_del(opts);
+    qapi_free_ChardevOptions(opts);
 }
 #endif
 

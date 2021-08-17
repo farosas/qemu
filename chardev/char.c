@@ -1114,37 +1114,6 @@ ChardevOptions *qemu_chr_parse_cli_str(const char *optarg, Error **errp)
     return chr_options;
 }
 
-Chardev *qemu_chr_new_from_opts(QemuOpts *opts, GMainContext *context,
-                                Error **errp)
-{
-    ChardevOptions *chr_options;
-    Chardev *chr;
-    QDict *args;
-    const char *name = qemu_opt_get(opts, "backend");
-    bool help;
-
-    args = qemu_opts_to_qdict(opts, NULL);
-
-    if (name && is_help_option(name)) {
-        qdict_del(args, "backend");
-        qdict_del(args, "type");
-        help = true;
-    } else {
-        help = qemu_opt_has_help_opt(opts);
-    }
-
-    chr_options = qemu_chr_parse_cli_dict(args, help, false, errp);
-    qobject_unref(args);
-
-    if (!chr_options) {
-        return NULL;
-    }
-
-    chr = qemu_chr_new_cli_gcontext(chr_options, context, errp);
-    qapi_free_ChardevOptions(chr_options);
-    return chr;
-}
-
 ChardevReturn *qmp_chardev_change(const char *id, ChardevBackend *backend,
                                   Error **errp)
 {
