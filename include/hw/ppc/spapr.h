@@ -207,6 +207,7 @@ struct SpaprMachineState {
     uint32_t initrd_base;
     long initrd_size;
     Vof *vof;
+    bool vof_client_started; /* Whether the VOF client is already running */
     uint64_t rtc_offset; /* Now used only during incoming migration */
     struct PPCTimebase tb;
     bool want_stdout_path;

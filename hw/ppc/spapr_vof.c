@@ -107,6 +107,7 @@ void spapr_vof_quiesce(MachineState *ms)
 
     spapr->fdt_size = fdt_totalsize(spapr->fdt_blob);
     spapr->fdt_initial_size = spapr->fdt_size;
+    spapr->vof_client_started = true;
 }
 
 bool spapr_vof_setprop(MachineState *ms, const char *path, const char *propname,
