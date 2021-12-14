@@ -19,6 +19,7 @@ ppc_ss.add(when: 'CONFIG_TCG', if_true: files(
 ))
 
 ppc_ss.add(libdecnumber)
+ppc_ss.add(libxz)
 
 gen = [
   decodetree.process('insn32.decode',
