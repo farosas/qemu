@@ -23,6 +23,7 @@
 #include "hw/cpu/core.h"
 #include "target/ppc/cpu.h"
 #include "qom/object.h"
+#include "hw/ppc/mce.h"
 
 #define TYPE_PNV_CORE "powernv-cpu-core"
 OBJECT_DECLARE_TYPE(PnvCore, PnvCoreClass,
@@ -70,4 +71,7 @@ struct PnvQuad {
     uint32_t quad_id;
     MemoryRegion xscom_regs;
 };
+
+void pnv_inject_mce(CPUState *cs, run_on_cpu_data data);
+
 #endif /* PPC_PNV_CORE_H */
