@@ -28,6 +28,8 @@
 #include "qemu/ctype.h"
 #include "monitor/hmp-target.h"
 #include "monitor/hmp.h"
+#include "qapi/qmp/qdict.h"
+#include "hw/ppc/mce.h"
 
 static target_long monitor_get_ccr(Monitor *mon, const struct MonitorDef *md,
                                    int val)
@@ -81,6 +83,36 @@ void hmp_info_tlb(Monitor *mon, const QDict *qdict)
         return;
     }
     dump_mmu(env1);
+}
+
+void hmp_mce(Monitor *mon, const QDict *qdict)
+{
+    CPUState *cs;
+    int cpu_index = qdict_get_int(qdict, "cpu_index");
+    uint64_t srr1_mask = qdict_get_int(qdict, "srr1_mask");
+    uint32_t dsisr = qdict_get_int(qdict, "dsisr");
+    uint64_t dar = qdict_get_int(qdict, "dar");
+    bool recovered = qdict_get_int(qdict, "recovered");
+    PPCMceInjection *mce = (PPCMceInjection *)
+        object_dynamic_cast(qdev_get_machine(), TYPE_PPC_MCE_INJECTION);
+
+    if (!mce) {
+        monitor_printf(mon, "MCE injection not supported on this machine\n");
+        return;
+    }
+
+    cs = qemu_get_cpu(cpu_index);
+
+    if (cs != NULL) {
+        PPCMceInjectionClass *mcec = PPC_MCE_INJECTION_GET_CLASS(mce);
+        PPCMceInjectionParams p = {
+            .srr1_mask = srr1_mask,
+            .dsisr = dsisr,
+            .dar = dar,
+            .recovered = recovered,
+        };
+        run_on_cpu(cs, mcec->inject_mce, RUN_ON_CPU_HOST_PTR(&p));
+    }
 }
 
 const MonitorDef monitor_defs[] = {
@@ -163,3 +195,13 @@ int target_get_monitor_def(CPUState *cs, const char *name, uint64_t *pval)
 
     return -EINVAL;
 }
+
+static const TypeInfo type_infos[] = {
+    {
+        .name = TYPE_PPC_MCE_INJECTION,
+        .parent = TYPE_INTERFACE,
+        .class_size = sizeof(PPCMceInjectionClass),
+    },
+};
+
+DEFINE_TYPES(type_infos);
