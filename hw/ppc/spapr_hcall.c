@@ -1214,6 +1214,8 @@ target_ulong do_client_architecture_support(PowerPCCPU *cpu,
 "Guest requested unavailable interrupt mode (XIVE), try the ic-mode=xive or ic-mode=dual machine property");
             exit(EXIT_FAILURE);
         }
+
+        spapr_xive_enable_store_eoi(spapr->xive, cpu);
     } else {
         if (!spapr->irq->xics) {
             error_report(

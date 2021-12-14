@@ -25,6 +25,7 @@
 #include "hw/ppc/xive_regs.h"
 #include "hw/qdev-properties.h"
 #include "trace.h"
+#include "cpu-models.h"
 
 /*
  * XIVE Virtualization Controller BAR and Thread Managment BAR that we
@@ -1852,4 +1853,34 @@ void spapr_xive_hcall_init(SpaprMachineState *spapr)
     spapr_register_hypercall(H_INT_ESB, h_int_esb);
     spapr_register_hypercall(H_INT_SYNC, h_int_sync);
     spapr_register_hypercall(H_INT_RESET, h_int_reset);
+}
+
+#define HOST_STORE_EOI \
+    "/proc/device-tree/interrupt-controller@6030203180000/store-eoi"
+
+void spapr_xive_enable_store_eoi(SpaprXive *xive, PowerPCCPU *cpu)
+{
+    /*
+     * Clear StoreEOI which could have been activated by a
+     * previous boot of a P10 compat guest.
+     */
+    xive->source.esb_flags &= ~XIVE_SRC_STORE_EOI;
+
+    /*
+     * Check for host support.
+     * TODO: Introduce a KVM capability.
+     */
+    if (access(HOST_STORE_EOI, F_OK)) {
+        warn_report("No StoreEOI support on host");
+        return;
+    }
+
+    /*
+     * Advertise StoreEOI for a P10 compat guest. OS is required
+     * to enforce load-after-store ordering.
+     */
+    if (ppc_check_compat(cpu, CPU_POWERPC_LOGICAL_3_10, 0,
+                         cpu->compat_pvr)) {
+        xive->source.esb_flags |= XIVE_SRC_STORE_EOI;
+    }
 }
