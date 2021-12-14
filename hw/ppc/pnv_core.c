@@ -68,6 +68,7 @@ static void pnv_core_cpu_reset(PnvCore *pc, PowerPCCPU *cpu)
     CPUState *cs = CPU(cpu);
     CPUPPCState *env = &cpu->env;
     PnvChipClass *pcc = PNV_CHIP_GET_CLASS(pc->chip);
+    PnvCoreClass *pcorec = PNV_CORE_GET_CLASS(pc);
 
     cpu_reset(cs);
 
@@ -83,6 +84,8 @@ static void pnv_core_cpu_reset(PnvCore *pc, PowerPCCPU *cpu)
         env->msr |= 1ull << MSR_LE;
         env->spr[SPR_HID0] |= HID0_POWER9_HILE;
     }
+    env->spr[SPR_HID0] |= pcorec->attn;
+
     hreg_compute_hflags(env);
 
     pcc->intc_reset(pc->chip, cpu);
@@ -328,6 +331,7 @@ static void pnv_core_power8_class_init(ObjectClass *oc, void *data)
     PnvCoreClass *pcc = PNV_CORE_CLASS(oc);
 
     pcc->xscom_ops = &pnv_core_power8_xscom_ops;
+    pcc->attn = HID0_ATTN;
 }
 
 static void pnv_core_power9_class_init(ObjectClass *oc, void *data)
@@ -335,6 +339,7 @@ static void pnv_core_power9_class_init(ObjectClass *oc, void *data)
     PnvCoreClass *pcc = PNV_CORE_CLASS(oc);
 
     pcc->xscom_ops = &pnv_core_power9_xscom_ops;
+    pcc->attn = HID0_POWER9_ATTN;
 }
 
 static void pnv_core_power10_class_init(ObjectClass *oc, void *data)
@@ -343,6 +348,7 @@ static void pnv_core_power10_class_init(ObjectClass *oc, void *data)
 
     /* TODO: Use the P9 XSCOMs for now on P10 */
     pcc->xscom_ops = &pnv_core_power9_xscom_ops;
+    pcc->attn = HID0_POWER9_ATTN;
 }
 
 static void pnv_core_class_init(ObjectClass *oc, void *data)
