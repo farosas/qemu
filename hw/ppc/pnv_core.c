@@ -76,9 +76,13 @@ static void pnv_core_cpu_reset(PnvCore *pc, PowerPCCPU *cpu)
      * system and it can be any.
      */
     env->gpr[3] = PNV_FDT_ADDR;
-    env->nip = 0x10;
+    env->nip = pc->entry;
     env->msr |= MSR_HVB; /* Hypervisor mode */
     env->spr[SPR_HRMOR] = pc->hrmor;
+    if (pc->little_endian) {
+        env->msr |= 1ull << MSR_LE;
+        env->spr[SPR_HID0] |= HID0_POWER9_HILE;
+    }
     hreg_compute_hflags(env);
 
     pcc->intc_reset(pc->chip, cpu);
@@ -313,6 +317,8 @@ static void pnv_core_unrealize(DeviceState *dev)
 static Property pnv_core_properties[] = {
     DEFINE_PROP_UINT32("pir", PnvCore, pir, 0),
     DEFINE_PROP_UINT64("hrmor", PnvCore, hrmor, 0),
+    DEFINE_PROP_UINT64("entry", PnvCore, entry, 0x10),
+    DEFINE_PROP_BOOL("little-endian", PnvCore, little_endian, false),
     DEFINE_PROP_LINK("chip", PnvCore, chip, TYPE_PNV_CHIP, PnvChip *),
     DEFINE_PROP_END_OF_LIST(),
 };

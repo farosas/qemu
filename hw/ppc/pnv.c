@@ -1947,6 +1947,12 @@ static void pnv_chip_core_realize(PnvChip *chip, Error **errp)
                                 pcc->core_pir(chip, core_hwid), &error_fatal);
         object_property_set_int(OBJECT(pnv_core), "hrmor", pnv->fw_load_addr,
                                 &error_fatal);
+        if (pnv->little_endian) {
+            object_property_set_bool(OBJECT(pnv_core), "little-endian", true,
+                                     &error_fatal);
+            object_property_set_int(OBJECT(pnv_core), "entry", 0x0,
+                                    &error_fatal);
+        }
         object_property_set_link(OBJECT(pnv_core), "chip", OBJECT(chip),
                                  &error_abort);
         qdev_realize(DEVICE(pnv_core), NULL, &error_fatal);
@@ -2213,6 +2219,26 @@ static void pnv_machine_power8_class_init(ObjectClass *oc, void *data)
     machine_class_allow_dynamic_sysbus_dev(mc, TYPE_PNV_PHB3);
 }
 
+static char *pnv_machine_get_endian(Object *obj, Error **errp)
+{
+    PnvMachineState *pnv = PNV_MACHINE(obj);
+
+    return g_strdup(pnv->little_endian ? "little" : "big");
+}
+
+static void pnv_machine_set_endian(Object *obj, const char *value, Error **errp)
+{
+    PnvMachineState *pnv = PNV_MACHINE(obj);
+
+    if (strcmp(value, "little") == 0) {
+        pnv->little_endian = true;
+    } else if (strcmp(value, "big") == 0) {
+        pnv->little_endian = false;
+    } else {
+        error_setg(errp, "Bad value for \"endianness\" property");
+    }
+}
+
 static void pnv_machine_power9_class_init(ObjectClass *oc, void *data)
 {
     MachineClass *mc = MACHINE_CLASS(oc);
@@ -2229,6 +2255,11 @@ static void pnv_machine_power9_class_init(ObjectClass *oc, void *data)
     pmc->compat = compat;
     pmc->compat_size = sizeof(compat);
     pmc->dt_power_mgt = pnv_dt_power_mgt;
+
+    object_class_property_add_str(oc, "endianness",
+                                  pnv_machine_get_endian, pnv_machine_set_endian);
+    object_class_property_set_description(oc, "endianness",
+                              "Change CPU initial endianness (default is big)");
 }
 
 static void pnv_machine_power10_class_init(ObjectClass *oc, void *data)
@@ -2246,6 +2277,11 @@ static void pnv_machine_power10_class_init(ObjectClass *oc, void *data)
     pmc->dt_power_mgt = pnv_dt_power_mgt;
 
     xfc->match_nvt = pnv10_xive_match_nvt;
+
+    object_class_property_add_str(oc, "endianness",
+                                  pnv_machine_get_endian, pnv_machine_set_endian);
+    object_class_property_set_description(oc, "endianness",
+                              "Change CPU initial endianness (default is big)");
 }
 
 static bool pnv_machine_get_hb(Object *obj, Error **errp)

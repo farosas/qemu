@@ -39,6 +39,8 @@ struct PnvCore {
     PowerPCCPU **threads;
     uint32_t pir;
     uint64_t hrmor;
+    uint64_t entry;
+    bool little_endian;
     PnvChip *chip;
 
     MemoryRegion xscom_regs;
