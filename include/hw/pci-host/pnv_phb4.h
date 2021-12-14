@@ -48,6 +48,7 @@ typedef struct PnvPhb4DMASpace {
  */
 #define TYPE_PNV_PHB4_ROOT_BUS "pnv-phb4-root-bus"
 #define TYPE_PNV_PHB4_ROOT_PORT "pnv-phb4-root-port"
+#define TYPE_PNV_PHB5_ROOT_PORT "pnv-phb5-root-port"
 
 typedef struct PnvPHB4RootPort {
     PCIESlot parent_obj;

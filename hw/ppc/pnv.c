@@ -1728,7 +1728,7 @@ static void pnv_chip_power10_quad_realize(Pnv10Chip *chip10, Error **errp)
 static void pnv_chip_power10_phb_realize(PnvChip *chip, Error **errp)
 {
     Pnv10Chip *chip10 = PNV10_CHIP(chip);
-    int i;
+    int i, j;
 
     for (i = 0; i < chip->num_pecs; i++) {
         PnvPhb4PecState *pec = &chip10->pecs[i];
@@ -1750,6 +1750,13 @@ static void pnv_chip_power10_phb_realize(PnvChip *chip, Error **errp)
 
         pnv_xscom_add_subregion(chip, pec_nest_base, &pec->nest_regs_mr);
         pnv_xscom_add_subregion(chip, pec_pci_base, &pec->pci_regs_mr);
+
+        for (j = 0; j < pec->num_stacks; j++) {
+            PnvPHB4 *phb = &pec->stacks[j].phb;
+
+            pnv_phb_attach_root_port(PCI_HOST_BRIDGE(phb), phb->phb_id,
+                                     TYPE_PNV_PHB5_ROOT_PORT);
+        }
     }
 }
 
