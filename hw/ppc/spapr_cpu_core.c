@@ -108,6 +108,11 @@ void spapr_cpu_set_entry_state(PowerPCCPU *cpu, target_ulong nip,
     CPU(cpu)->halted = 0;
     /* Enable Power-saving mode Exit Cause exceptions */
     ppc_store_lpcr(cpu, env->spr[SPR_LPCR] | pcc->lpcr_pm);
+
+    env->nip = 0x0;
+    env->msr |= (target_ulong)1 << MSR_LE;
+    env->spr[SPR_HID0] |= HID0_POWER9_ATTN;
+    ppc_store_lpcr(cpu, env->spr[SPR_LPCR] | LPCR_ILE);
 }
 
 /*

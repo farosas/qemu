@@ -4165,7 +4165,7 @@ static void gen_attn(DisasContext *ctx)
  #if defined(CONFIG_USER_ONLY)
     GEN_PRIV;
 #else
-    CHK_HV; /* or SV ? */
+    CHK_SV;
 
     gen_helper_attn(cpu_env, cpu_gpr[3]);
     ctx->base.is_jmp = DISAS_NORETURN;
