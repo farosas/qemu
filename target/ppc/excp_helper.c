@@ -348,10 +348,10 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp)
     }
 
     /*
-     * new interrupt handler msr preserves existing HV and ME unless
-     * explicitly overriden
+     * new interrupt handler msr preserves existing HV, ME and LE
+     * unless explicitly overriden.
      */
-    new_msr = env->msr & (((target_ulong)1 << MSR_ME) | MSR_HVB);
+    new_msr = env->msr & (((target_ulong)1 << MSR_ME) | MSR_HVB | MSR_LE);
 
     /* target registers */
     srr0 = SPR_SRR0;
@@ -763,13 +763,9 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp)
     if (excp_model >= POWERPC_EXCP_970) {
         if (ppc_interrupts_little_endian(cpu, !!(new_msr & MSR_HVB))) {
             new_msr |= (target_ulong)1 << MSR_LE;
+        } else {
+            new_msr &= ~((target_ulong)1 << MSR_LE);
         }
-    } else if (msr_ile) {
-        new_msr |= (target_ulong)1 << MSR_LE;
-    }
-#else
-    if (msr_ile) {
-        new_msr |= (target_ulong)1 << MSR_LE;
     }
 #endif
 
