@@ -766,14 +766,6 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp)
         }
     }
 
-    /*
-     * We preserve MSR_LE, but some CPUs can take interrupts in a
-     * different endianness.
-     */
-    if (excp_model >= POWERPC_EXCP_970) {
-        ppc_excp_toggle_ile(cpu, &new_msr);
-    }
-
 #if defined(TARGET_PPC64)
     if (excp_model == POWERPC_EXCP_BOOKE) {
         if (env->spr[SPR_BOOKE_EPCR] & EPCR_ICM) {
@@ -799,8 +791,16 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp)
         env->spr[srr1] = msr;
     }
 
-    /* This can update new_msr and vector if AIL applies */
-    ppc_excp_apply_ail(cpu, excp_model, excp, msr, &new_msr, &vector);
+    if (excp_model >= POWERPC_EXCP_970) {
+        /*
+         * We preserve MSR_LE, but some CPUs can take interrupts in a
+         * different endianness.
+         */
+        ppc_excp_toggle_ile(cpu, &new_msr);
+
+        /* This can update new_msr and vector if AIL applies */
+        ppc_excp_apply_ail(cpu, excp_model, excp, msr, &new_msr, &vector);
+    }
 
     powerpc_set_excp_state(cpu, vector, new_msr);
 }
