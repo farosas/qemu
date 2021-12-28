@@ -290,6 +290,17 @@ static inline void ppc_excp_apply_ail(PowerPCCPU *cpu, int excp_model, int excp,
 #endif
 }
 
+static void ppc_excp_toggle_ile(PowerPCCPU *cpu, target_ulong *new_msr)
+{
+#ifdef TARGET_PPC64
+    if (ppc_interrupts_little_endian(cpu, !!(*new_msr & MSR_HVB))) {
+        *new_msr |= (target_ulong)1 << MSR_LE;
+    } else {
+        *new_msr &= ~((target_ulong)1 << MSR_LE);
+    }
+#endif
+}
+
 static inline void powerpc_set_excp_state(PowerPCCPU *cpu,
                                           target_ulong vector, target_ulong msr)
 {
@@ -756,18 +767,12 @@ static inline void powerpc_excp(PowerPCCPU *cpu, int excp)
     }
 
     /*
-     * Sort out endianness of interrupt, this differs depending on the
-     * CPU, the HV mode, etc...
+     * We preserve MSR_LE, but some CPUs can take interrupts in a
+     * different endianness.
      */
-#ifdef TARGET_PPC64
     if (excp_model >= POWERPC_EXCP_970) {
-        if (ppc_interrupts_little_endian(cpu, !!(new_msr & MSR_HVB))) {
-            new_msr |= (target_ulong)1 << MSR_LE;
-        } else {
-            new_msr &= ~((target_ulong)1 << MSR_LE);
-        }
+        ppc_excp_toggle_ile(cpu, &new_msr);
     }
-#endif
 
 #if defined(TARGET_PPC64)
     if (excp_model == POWERPC_EXCP_BOOKE) {
