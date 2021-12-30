@@ -189,9 +189,11 @@ struct SpaprMachineState {
     long kernel_size;
     bool kernel_le;
     uint64_t kernel_addr;
+    uint64_t mmio_addr;
     uint32_t initrd_base;
     long initrd_size;
     Vof *vof;
+    bool vof_client_started; /* Whether the VOF client is already running */
     uint64_t rtc_offset; /* Now used only during incoming migration */
     struct PPCTimebase tb;
     bool has_graphics;

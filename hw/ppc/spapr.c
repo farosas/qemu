@@ -2669,6 +2669,86 @@ static void spapr_create_nvdimm_dr_connectors(SpaprMachineState *spapr)
     }
 }
 
+
+
+#define INIT 0x0
+#define DATA 0x8
+
+static MemoryRegion *test_mmio;
+static uint64_t data_base_addr;
+static bool init;
+
+static uint64_t test_mmio_read(void *opaque, hwaddr offset, unsigned size)
+{
+    uint64_t ret;
+
+    if (!init || !data_base_addr)
+	    return -1;
+
+    error_report("%s addr: 0x%" HWADDR_PRIx " size: %x", __func__,
+		 data_base_addr + offset, size);
+
+    assert(size == 8);
+    ret = ldq_le_phys(&address_space_memory, data_base_addr + offset);
+
+    return ret;
+}
+
+static void test_mmio_write(void *opaque, hwaddr offset, uint64_t value, unsigned size)
+{
+    SpaprMachineState *spapr = SPAPR_MACHINE(opaque);
+
+    error_report("%s addr: 0x%" HWADDR_PRIx " value: %#lx size: %x init: %d", __func__,
+		 spapr->mmio_addr + offset, value, size, init);
+
+    if (!init || !data_base_addr) {
+	    /*
+	     * config step: before starting operation, the guest sends
+	     * the mmio_addr, followed by the data_addr. Subsequent
+	     * reads/writes are addressed to RAM at data_base_addr +
+	     * offset.
+	     */
+	    switch (offset) {
+	    case INIT:
+		    if ((value & ~(0xfffUL << 52)) == spapr->mmio_addr)
+			    init = true;
+		    break;
+	    case DATA:
+		    data_base_addr = (value & ~(0xfffUL << 52));
+		    return;
+	    default:
+		    error_report("%s unknown code %#lx", __func__, offset);
+		    return;
+	    }
+    }
+
+    assert(size == 8);
+    stq_le_phys(&address_space_memory, data_base_addr + offset, value);
+}
+
+static const MemoryRegionOps test_mmio_ops = {
+    .read = test_mmio_read,
+    .write = test_mmio_write,
+    .endianness = DEVICE_LITTLE_ENDIAN,
+    .valid = {
+        .min_access_size = 8,
+        .max_access_size = 8,
+    },
+    .impl = {
+        .min_access_size = 8,
+        .max_access_size = 8,
+    },
+};
+
+static void add_test_mmio_region(SpaprMachineState *spapr)
+{
+    test_mmio = g_malloc(sizeof(*test_mmio));
+    memory_region_init_io(test_mmio, NULL, &test_mmio_ops, spapr, "mmio-test-page", 0x10000);
+    memory_region_add_subregion(get_system_memory(), spapr->mmio_addr, test_mmio);
+}
+
+
+
 /* pSeries LPAR / sPAPR hardware init */
 static void spapr_machine_init(MachineState *machine)
 {
@@ -2806,7 +2886,10 @@ static void spapr_machine_init(MachineState *machine)
     }
 
     /* map RAM */
-    memory_region_add_subregion(sysmem, 0, machine->ram);
+    memory_region_add_subregion(sysmem, 0x0, machine->ram);
+
+    if (spapr->mmio_addr != -1)
+        add_test_mmio_region(spapr);
 
     /* always allocate the device memory information */
     machine->device_memory = g_malloc0(sizeof(*machine->device_memory));
@@ -3342,6 +3425,10 @@ static void spapr_instance_init(Object *obj)
 
     object_property_add_uint64_ptr(obj, "kernel-addr",
                                    &spapr->kernel_addr, OBJ_PROP_FLAG_READWRITE);
+
+    object_property_add_uint64_ptr(obj, "mmio-addr",
+                                   &spapr->mmio_addr, OBJ_PROP_FLAG_READWRITE);
+    spapr->mmio_addr = -1;
     object_property_set_description(obj, "kernel-addr",
                                     stringify(KERNEL_LOAD_ADDR)
                                     " for -kernel is the default");
