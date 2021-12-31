@@ -2535,15 +2535,19 @@ POWERPC_FAMILY(405)(ObjectClass *oc, void *data)
                        PPC_MEM_SYNC | PPC_MEM_EIEIO |
                        PPC_40x_TLB | PPC_MEM_TLBIA | PPC_MEM_TLBSYNC |
                        PPC_4xx_COMMON | PPC_405_MAC | PPC_40x_EXCP;
-    pcc->msr_mask = (1ull << MSR_POW) |
+    pcc->msr_mask = (1ull << MSR_AP) |
+                    (1ull << MSR_POW) |
                     (1ull << MSR_CE) |
                     (1ull << MSR_EE) |
                     (1ull << MSR_PR) |
                     (1ull << MSR_FP) |
+                    (1ull << MSR_ME) |
                     (1ull << MSR_DWE) |
                     (1ull << MSR_DE) |
+                    (1ull << MSR_FE1) |
                     (1ull << MSR_IR) |
                     (1ull << MSR_DR);
+
     pcc->mmu_model = POWERPC_MMU_SOFT_4xx;
     pcc->excp_model = POWERPC_EXCP_40x;
     pcc->bus_model = PPC_FLAGS_INPUT_405;
