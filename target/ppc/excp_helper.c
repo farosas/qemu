@@ -935,9 +935,6 @@ static void powerpc_excp_books(PowerPCCPU *cpu, int excp)
         new_msr |= env->msr & ((target_ulong)1 << MSR_RI);
 
         vector += lev * 0x20;
-
-        env->lr = env->nip;
-        env->ctr = msr;
         break;
     case POWERPC_EXCP_FPU:       /* Floating-point unavailable exception     */
     case POWERPC_EXCP_DECR:      /* Decrementer exception                    */
@@ -991,21 +988,14 @@ static void powerpc_excp_books(PowerPCCPU *cpu, int excp)
         new_msr |= (target_ulong)MSR_HVB;
         new_msr |= env->msr & ((target_ulong)1 << MSR_RI);
         break;
-    case POWERPC_EXCP_PERFM:     /* Embedded performance monitor interrupt   */
+    case POWERPC_EXCP_EBB:     /* Event-based branch exception                */
         env->spr[SPR_BESCR] &= ~BESCR_GE;
         env->spr[SPR_BESCR] |= BESCR_PMEO;
 
-        /*
-         * Save NIP for rfebb insn in SPR_EBBRR. Next nip is
-         * stored in the EBB Handler SPR_EBBHR.
-         */
-        env->spr[SPR_EBBRR] = env->nip;
-        powerpc_set_excp_state(cpu, env->spr[SPR_EBBHR], env->msr);
-
-        /*
-         * This exception is handled in userspace. No need to proceed.
-         */
-        return;
+        /* EBB keeps the same MSR */
+        new_msr = env->msr;
+        break;
+    case POWERPC_EXCP_PERFM:     /* Embedded performance monitor interrupt   */
     case POWERPC_EXCP_THERM:     /* Thermal interrupt                        */
     case POWERPC_EXCP_VPUA:      /* Vector assist exception                  */
     case POWERPC_EXCP_MAINT:     /* Maintenance exception                    */
@@ -1041,12 +1031,27 @@ static void powerpc_excp_books(PowerPCCPU *cpu, int excp)
 
     new_msr |= (target_ulong)1 << MSR_SF;
 
-    if (excp != POWERPC_EXCP_SYSCALL_VECTORED) {
+    /* Not all exceptions use SRRs for saving NIP and MSR */
+    switch (excp) {
+    case POWERPC_EXCP_SYSCALL_VECTORED:
+        env->lr = env->nip;
+        env->ctr = msr;
+        break;
+
+    case POWERPC_EXCP_EBB:
+        env->spr[SPR_EBBRR] = env->nip;
+        /* MSR is left untouched, so it is not saved */
+
+        assert(new_msr == env->msr);
+        break;
+
+    default:
         /* Save PC */
         env->spr[srr0] = env->nip;
 
         /* Save MSR */
         env->spr[srr1] = msr;
+        break;
     }
 
     /* This can update new_msr and vector if AIL applies */
@@ -1686,14 +1691,8 @@ static void ppc_hw_interrupt(CPUPPCState *env)
             return;
         }
         if (env->pending_interrupts & (1 << PPC_INTERRUPT_PERFM)) {
-            /*
-             * PERFM EBB must be taken in problem state and
-             * with BESCR_GE set.
-             */
-            if (msr_pr == 1 && env->spr[SPR_BESCR] & BESCR_GE) {
-                env->pending_interrupts &= ~(1 << PPC_INTERRUPT_PERFM);
-                powerpc_excp(cpu, POWERPC_EXCP_PERFM);
-            }
+            env->pending_interrupts &= ~(1 << PPC_INTERRUPT_PERFM);
+            powerpc_excp(cpu, POWERPC_EXCP_PERFM);
             return;
         }
         /* Thermal interrupt */
@@ -1939,8 +1938,6 @@ void helper_rfebb(CPUPPCState *env, target_ulong s)
 
 void helper_ebb_perfm_int(CPUPPCState *env)
 {
-    PowerPCCPU *cpu = env_archcpu(env);
-
     /*
      * FSCR_EBB and FSCR_IC_EBB are the same bits used with
      * HFSCR.
@@ -1949,16 +1946,13 @@ void helper_ebb_perfm_int(CPUPPCState *env)
     helper_hfscr_facility_check(env, FSCR_EBB, "EBB", FSCR_IC_EBB);
 
     /*
-     * Setting "env->pending_interrupts |= 1 << PPC_INTERRUPT_PERFM"
-     * instead of calling "ppc_set_irq()"" works in most cases, but under
-     * certain race conditions (e.g. lost_exception_test EBB kernel
-     * selftest) this hits an assert when dealing with the BQL:
-     *
-     * tcg_handle_interrupt: assertion failed: (qemu_mutex_iothread_locked())
-     *
-     * We ended up using ppc_set_irq() because it handles the BQL.
+     * PERFM EBB must be taken in problem state and
+     * with BESCR_GE set.
      */
-    ppc_set_irq(cpu, PPC_INTERRUPT_PERFM, 1);
+    if (msr_pr == 1 && env->spr[SPR_BESCR] & BESCR_GE) {
+        env->excp_vectors[POWERPC_EXCP_EBB] = env->spr[SPR_EBBHR];
+        raise_exception(env, POWERPC_EXCP_EBB);
+    }
 }
 #endif
 
