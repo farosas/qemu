@@ -184,6 +184,7 @@ void powerpc_excp_40x(PowerPCCPU *cpu, int excp);
 void powerpc_excp_6xx(PowerPCCPU *cpu, int excp);
 void powerpc_excp_7xx(PowerPCCPU *cpu, int excp);
 void powerpc_excp_74xx(PowerPCCPU *cpu, int excp);
+void powerpc_excp_booke(PowerPCCPU *cpu, int excp);
 
 #define PPC_INPUT(env) ((env)->bus_model)
 
