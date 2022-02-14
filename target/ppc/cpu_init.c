@@ -46,40 +46,6 @@
 #include "spr_common.h"
 #include "power8-pmu.h"
 
-/* #define PPC_DEBUG_SPR */
-/* #define USE_APPLE_GDB */
-
-/*
- * AMR     => SPR 29 (Power 2.04)
- * CTRL    => SPR 136 (Power 2.04)
- * CTRL    => SPR 152 (Power 2.04)
- * SCOMC   => SPR 276 (64 bits ?)
- * SCOMD   => SPR 277 (64 bits ?)
- * TBU40   => SPR 286 (Power 2.04 hypv)
- * HSPRG0  => SPR 304 (Power 2.04 hypv)
- * HSPRG1  => SPR 305 (Power 2.04 hypv)
- * HDSISR  => SPR 306 (Power 2.04 hypv)
- * HDAR    => SPR 307 (Power 2.04 hypv)
- * PURR    => SPR 309 (Power 2.04 hypv)
- * HDEC    => SPR 310 (Power 2.04 hypv)
- * HIOR    => SPR 311 (hypv)
- * RMOR    => SPR 312 (970)
- * HRMOR   => SPR 313 (Power 2.04 hypv)
- * HSRR0   => SPR 314 (Power 2.04 hypv)
- * HSRR1   => SPR 315 (Power 2.04 hypv)
- * LPIDR   => SPR 317 (970)
- * EPR     => SPR 702 (Power 2.04 emb)
- * perf    => 768-783 (Power 2.04)
- * perf    => 784-799 (Power 2.04)
- * PPR     => SPR 896 (Power 2.04)
- * DABRX   => 1015    (Power 2.04 hypv)
- * FPECR   => SPR 1022 (?)
- * ... and more (thermal management, performance counters, ...)
- */
-
-/*****************************************************************************/
-/* Exception vectors models                                                  */
-
 #if !defined(CONFIG_USER_ONLY)
 void cpu_ppc_set_vhyp(PowerPCCPU *cpu, PPCVirtualHypervisor *vhyp)
 {
