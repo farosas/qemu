@@ -3,6 +3,7 @@ ppc_ss.add(files(
   'cpu-models.c',
   'cpu.c',
   'cpu_init.c',
+  'cpu_40x.c',
   'excp_helper.c',
   'gdbstub.c',
   'helper_regs.c',
