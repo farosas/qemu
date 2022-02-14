@@ -184,6 +184,7 @@ struct PowerPCCPUClass {
     int n_host_threads;
     void (*init_proc)(CPUPPCState *env);
     int  (*check_pow)(CPUPPCState *env);
+    void (*dispatch_excp)(PowerPCCPU *cpu, int excp);
 };
 
 #ifndef CONFIG_USER_ONLY

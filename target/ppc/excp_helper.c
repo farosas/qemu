@@ -193,6 +193,7 @@ static bool books_vhyp_promotes_external_to_hvirt(PowerPCCPU *cpu)
 
 static void powerpc_excp(PowerPCCPU *cpu, int excp)
 {
+    PowerPCCPUClass *pcc = POWERPC_CPU_GET_CLASS(cpu);
     CPUState *cs = CPU(cpu);
     CPUPPCState *env = &cpu->env;
 
@@ -206,34 +207,7 @@ static void powerpc_excp(PowerPCCPU *cpu, int excp)
 
     trace_ppc_excp(env->nip, powerpc_excp_name(excp), excp, env->error_code);
 
-    switch (env->excp_model) {
-    case POWERPC_EXCP_40x:
-        powerpc_excp_40x(cpu, excp);
-        break;
-    case POWERPC_EXCP_6xx:
-        powerpc_excp_6xx(cpu, excp);
-        break;
-    case POWERPC_EXCP_7xx:
-        powerpc_excp_7xx(cpu, excp);
-        break;
-    case POWERPC_EXCP_74xx:
-        powerpc_excp_74xx(cpu, excp);
-        break;
-    case POWERPC_EXCP_BOOKE:
-        powerpc_excp_booke(cpu, excp);
-        break;
-#if defined(TARGET_PPC64)
-    case POWERPC_EXCP_970:
-    case POWERPC_EXCP_POWER7:
-    case POWERPC_EXCP_POWER8:
-    case POWERPC_EXCP_POWER9:
-    case POWERPC_EXCP_POWER10:
-        powerpc_excp_books(cpu, excp);
-        break;
-#endif
-    default:
-        g_assert_not_reached();
-    }
+    (*pcc->dispatch_excp)(cpu, excp);
 }
 
 void ppc_cpu_do_interrupt(CPUState *cs)

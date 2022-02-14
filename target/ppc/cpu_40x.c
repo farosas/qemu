@@ -16,7 +16,7 @@
 #include "helper_regs.h"
 
 #if !defined(CONFIG_USER_ONLY)
-void powerpc_excp_40x(PowerPCCPU *cpu, int excp)
+static void powerpc_excp_40x(PowerPCCPU *cpu, int excp)
 {
     CPUState *cs = CPU(cpu);
     CPUPPCState *env = &cpu->env;
@@ -154,7 +154,7 @@ void powerpc_excp_40x(PowerPCCPU *cpu, int excp)
     powerpc_set_excp_state(cpu, vector, new_msr);
 }
 #else
-void powerpc_excp_40x(PowerPCCPU *cpu, int excp)
+static void powerpc_excp_40x(PowerPCCPU *cpu, int excp)
 {
     g_assert_not_reached();
 }
@@ -385,6 +385,7 @@ POWERPC_FAMILY(405)(ObjectClass *oc, void *data)
     dc->desc = "PowerPC 405";
     pcc->init_proc = init_proc_405;
     pcc->check_pow = check_pow_nocheck;
+    pcc->dispatch_excp = powerpc_excp_40x;
     pcc->insns_flags = PPC_INSNS_BASE | PPC_STRING | PPC_MFTB |
                        PPC_DCR | PPC_WRTEE |
                        PPC_CACHE | PPC_CACHE_ICBI | PPC_40x_ICBT |
