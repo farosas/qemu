@@ -90,6 +90,7 @@ static int cap_ppc_nested_kvm_hv;
 static int cap_large_decr;
 static int cap_fwnmi;
 static int cap_rpt_invalidate;
+static int cap_ail_mode_3;
 
 static uint32_t debug_inst_opcode;
 
@@ -154,6 +155,7 @@ int kvm_arch_init(MachineState *ms, KVMState *s)
     }
 
     cap_rpt_invalidate = kvm_vm_check_extension(s, KVM_CAP_PPC_RPT_INVALIDATE);
+    cap_ail_mode_3 = kvm_vm_check_extension(s, KVM_CAP_PPC_AIL_MODE_3);
     kvm_ppc_register_host_cpu_type();
 
     return 0;
@@ -2563,9 +2565,23 @@ int kvmppc_has_cap_rpt_invalidate(void)
     return cap_rpt_invalidate;
 }
 
-int kvmppc_supports_ail_3(void)
+int kvmppc_has_cap_ail_3(void)
 {
     PowerPCCPUClass *pcc = kvm_ppc_get_host_cpu_class();
+
+    if (cap_ail_mode_3) {
+        return 1;
+    }
+
+    if (kvm_ioctl(kvm_state, KVM_CHECK_EXTENSION, KVM_CAP_PPC_AIL_MODE_3) == 0) {
+        return 0;
+    }
+
+    /*
+     * For KVM hosts that pre-date this cap, special-case the test because
+     * the performance cost for disabling the feature unconditionally is
+     * prohibitive.
+     */
 
     /*
      * KVM PR only supports AIL-0

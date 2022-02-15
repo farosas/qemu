@@ -619,7 +619,7 @@ static void cap_ail_mode_3_apply(SpaprMachineState *spapr,
     ERRP_GUARD();
 
     if (kvm_enabled()) {
-        if (!kvmppc_supports_ail_3()) {
+        if (!kvmppc_has_cap_ail_3()) {
             error_setg(errp, "KVM implementation does not support cap-ail-mode-3");
             error_append_hint(errp, "Try appending -machine cap-ail-mode-3=off\n");
             return;
