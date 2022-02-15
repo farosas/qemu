@@ -2563,6 +2563,29 @@ int kvmppc_has_cap_rpt_invalidate(void)
     return cap_rpt_invalidate;
 }
 
+int kvmppc_supports_ail_3(void)
+{
+    PowerPCCPUClass *pcc = kvm_ppc_get_host_cpu_class();
+
+    /*
+     * KVM PR only supports AIL-0
+     */
+    if (kvmppc_is_pr(kvm_state)) {
+        return 0;
+    }
+
+    /*
+     * KVM HV hosts support AIL-3 on POWER8 and above, except for radix
+     * mode on some early POWER9s, but it's not clear how to cover those
+     * without disabling the feature for many.
+     */
+    if (!(pcc->insns_flags2 & PPC2_ISA207S)) {
+        return 0;
+    }
+
+    return 1;
+}
+
 PowerPCCPUClass *kvm_ppc_get_host_cpu_class(void)
 {
     uint32_t host_pvr = mfpvr();
