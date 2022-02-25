@@ -36,7 +36,7 @@
 /* Exception processing */
 #if !defined(CONFIG_USER_ONLY)
 
-static const char *powerpc_excp_name(int excp)
+const char *powerpc_excp_name(int excp)
 {
     switch (excp) {
     case POWERPC_EXCP_CRITICAL: return "CRITICAL";
@@ -335,7 +335,7 @@ static void ppc_excp_apply_ail(PowerPCCPU *cpu, int excp, target_ulong msr,
 }
 #endif
 
-static void powerpc_reset_excp_state(PowerPCCPU *cpu)
+void powerpc_reset_excp_state(PowerPCCPU *cpu)
 {
     CPUState *cs = CPU(cpu);
     CPUPPCState *env = &cpu->env;
@@ -345,8 +345,8 @@ static void powerpc_reset_excp_state(PowerPCCPU *cpu)
     env->error_code = 0;
 }
 
-static void powerpc_set_excp_state(PowerPCCPU *cpu, target_ulong vector,
-                                   target_ulong msr)
+void powerpc_set_excp_state(PowerPCCPU *cpu, target_ulong vector,
+                            target_ulong msr)
 {
     CPUPPCState *env = &cpu->env;
 

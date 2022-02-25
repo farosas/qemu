@@ -175,6 +175,11 @@ enum {
     POWERPC_EXCP_TRAP          = 0x40,
 };
 
+const char *powerpc_excp_name(int excp);
+void powerpc_set_excp_state(PowerPCCPU *cpu,
+                            target_ulong vector, target_ulong msr);
+void powerpc_reset_excp_state(PowerPCCPU *cpu);
+
 #define PPC_INPUT(env) ((env)->bus_model)
 
 /*****************************************************************************/
