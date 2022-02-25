@@ -105,33 +105,6 @@ static const char *powerpc_excp_name(int excp)
     }
 }
 
-static void dump_syscall(CPUPPCState *env)
-{
-    qemu_log_mask(CPU_LOG_INT, "syscall r0=%016" PRIx64
-                  " r3=%016" PRIx64 " r4=%016" PRIx64 " r5=%016" PRIx64
-                  " r6=%016" PRIx64 " r7=%016" PRIx64 " r8=%016" PRIx64
-                  " nip=" TARGET_FMT_lx "\n",
-                  ppc_dump_gpr(env, 0), ppc_dump_gpr(env, 3),
-                  ppc_dump_gpr(env, 4), ppc_dump_gpr(env, 5),
-                  ppc_dump_gpr(env, 6), ppc_dump_gpr(env, 7),
-                  ppc_dump_gpr(env, 8), env->nip);
-}
-
-static void dump_hcall(CPUPPCState *env)
-{
-    qemu_log_mask(CPU_LOG_INT, "hypercall r3=%016" PRIx64
-                  " r4=%016" PRIx64 " r5=%016" PRIx64 " r6=%016" PRIx64
-                  " r7=%016" PRIx64 " r8=%016" PRIx64 " r9=%016" PRIx64
-                  " r10=%016" PRIx64 " r11=%016" PRIx64 " r12=%016" PRIx64
-                  " nip=" TARGET_FMT_lx "\n",
-                  ppc_dump_gpr(env, 3), ppc_dump_gpr(env, 4),
-                  ppc_dump_gpr(env, 5), ppc_dump_gpr(env, 6),
-                  ppc_dump_gpr(env, 7), ppc_dump_gpr(env, 8),
-                  ppc_dump_gpr(env, 9), ppc_dump_gpr(env, 10),
-                  ppc_dump_gpr(env, 11), ppc_dump_gpr(env, 12),
-                  env->nip);
-}
-
 static void ppc_excp_debug_sw_tlb(CPUPPCState *env, int excp)
 {
     const char *es;
@@ -502,7 +475,7 @@ static void powerpc_excp_40x(PowerPCCPU *cpu, int excp)
         }
         break;
     case POWERPC_EXCP_SYSCALL:   /* System call exception                    */
-        dump_syscall(env);
+        trace_ppc_syscall(env, 0);
 
         /*
          * We need to correct the NIP which in this case is supposed
@@ -646,7 +619,7 @@ static void powerpc_excp_6xx(PowerPCCPU *cpu, int excp)
         }
         break;
     case POWERPC_EXCP_SYSCALL:   /* System call exception                    */
-        dump_syscall(env);
+        trace_ppc_syscall(env, 0);
 
         /*
          * We need to correct the NIP which in this case is supposed
@@ -822,11 +795,7 @@ static void powerpc_excp_7xx(PowerPCCPU *cpu, int excp)
     {
         int lev = env->error_code;
 
-        if (lev == 1 && cpu->vhyp) {
-            dump_hcall(env);
-        } else {
-            dump_syscall(env);
-        }
+        trace_ppc_syscall(env, lev);
 
         /*
          * We need to correct the NIP which in this case is supposed
@@ -1007,11 +976,7 @@ static void powerpc_excp_74xx(PowerPCCPU *cpu, int excp)
     {
         int lev = env->error_code;
 
-        if ((lev == 1) && cpu->vhyp) {
-            dump_hcall(env);
-        } else {
-            dump_syscall(env);
-        }
+        trace_ppc_syscall(env, lev);
 
         /*
          * We need to correct the NIP which in this case is supposed
@@ -1206,7 +1171,7 @@ static void powerpc_excp_booke(PowerPCCPU *cpu, int excp)
         }
         break;
     case POWERPC_EXCP_SYSCALL:   /* System call exception                    */
-        dump_syscall(env);
+        trace_ppc_syscall(env, 0);
 
         /*
          * We need to correct the NIP which in this case is supposed
@@ -1467,11 +1432,7 @@ static void powerpc_excp_books(PowerPCCPU *cpu, int excp)
     case POWERPC_EXCP_SYSCALL:   /* System call exception                    */
         lev = env->error_code;
 
-        if ((lev == 1) && cpu->vhyp) {
-            dump_hcall(env);
-        } else {
-            dump_syscall(env);
-        }
+        trace_ppc_syscall(env, lev);
 
         /*
          * We need to correct the NIP which in this case is supposed
@@ -1492,7 +1453,7 @@ static void powerpc_excp_books(PowerPCCPU *cpu, int excp)
         break;
     case POWERPC_EXCP_SYSCALL_VECTORED: /* scv exception                     */
         lev = env->error_code;
-        dump_syscall(env);
+        trace_ppc_syscall(env, 0);
         env->nip += 4;
         new_msr |= env->msr & ((target_ulong)1 << MSR_EE);
         new_msr |= env->msr & ((target_ulong)1 << MSR_RI);
