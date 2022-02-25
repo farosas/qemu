@@ -19,6 +19,7 @@
 #include "qemu/osdep.h"
 #include "qemu/main-loop.h"
 #include "qemu/log.h"
+#include "qemu/error-report.h"
 #include "cpu.h"
 #include "exec/exec-all.h"
 #include "internal.h"
@@ -1599,9 +1600,11 @@ static void powerpc_excp(PowerPCCPU *cpu, int excp)
         cpu_abort(cs, "Invalid PowerPC exception %d. Aborting\n", excp);
     }
 
-    qemu_log_mask(CPU_LOG_INT, "Raise exception at " TARGET_FMT_lx
-                  " => %s (%d) error=%02x\n", env->nip, powerpc_excp_name(excp),
-                  excp, env->error_code);
+    if (qemu_loglevel_mask(CPU_LOG_INT)) {
+        warn_report_once("use -trace ppc_excp* instead of -d int\n");
+    }
+
+    trace_ppc_excp(env->nip, powerpc_excp_name(excp), excp, env->error_code);
 
     switch (env->excp_model) {
     case POWERPC_EXCP_40x:

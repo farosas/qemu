@@ -38,3 +38,5 @@ ppc_excp_inval(uint64_t nip) "Invalid instruction at 0x%" PRIx64
 ppc_excp_print(const char *excp) "%s exception"
 ppc_excp_syscall(unsigned long r0, unsigned long r3, unsigned long r4, unsigned long r5, unsigned long r6, unsigned long r7, unsigned long r8, unsigned long nip) "r0=0x%016" PRIx64 " r3=0x%016" PRIx64 " r4=0x%016" PRIx64 " r5=0x%016" PRIx64 " r6=0x%016" PRIx64 " r7=0x%016" PRIx64 " r8=0x%016" PRIx64 " nip=0x%" PRIx64
 ppc_excp_hypercall(unsigned long r3, unsigned long r4, unsigned long r5, unsigned long r6, unsigned long r7, unsigned long r8, unsigned long r9, unsigned long r10, unsigned long nip) "r3=0x%016" PRIx64 " r4=0x%016" PRIx64 " r5=0x%016" PRIx64 " r6=0x%016" PRIx64 " r7=0x%016" PRIx64 " r8=0x%016" PRIx64 " r9=0x%016" PRIx64 " r10=0x%016" PRIx64 " nip=0x%" PRIx64
+ppc_excp_hv_fu(uint32_t bit, const char* caller) "HV Facility 0x%x is unavailable (%s)"
+ppc_excp(unsigned long nip, const char* name, int excp, uint32_t flags) "Raise exception at 0x%" PRIx64 " => %s (%d) error=0x%02x"

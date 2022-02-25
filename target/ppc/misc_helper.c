@@ -27,6 +27,7 @@
 #include "mmu-book3s-v3.h"
 
 #include "helper_regs.h"
+#include "trace.h"
 
 /*****************************************************************************/
 /* SPR accesses */
@@ -47,8 +48,7 @@ static void raise_hv_fu_exception(CPUPPCState *env, uint32_t bit,
                                   const char *caller, uint32_t cause,
                                   uintptr_t raddr)
 {
-    qemu_log_mask(CPU_LOG_INT, "HV Facility %d is unavailable (%s)\n",
-                  bit, caller);
+    trace_ppc_excp_hv_fu(bit, caller);
 
     env->spr[SPR_HFSCR] &= ~((target_ulong)FSCR_IC_MASK << FSCR_IC_POS);
 
