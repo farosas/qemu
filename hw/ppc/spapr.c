@@ -972,7 +972,7 @@ static void spapr_dt_ov5_platform_support(SpaprMachineState *spapr, void *fdt,
         23, 0x00, /* XICS / XIVE mode */
         24, 0x00, /* Hash/Radix, filled in below. */
         25, 0x00, /* Hash options: Segment Tables == no, GTSE == no. */
-        26, 0x40, /* Radix options: GTSE == yes. */
+        26, 0x00, /* Radix options, filled in below. */
     };
 
     if (spapr->irq->xics && spapr->irq->xive) {
@@ -1005,6 +1005,11 @@ static void spapr_dt_ov5_platform_support(SpaprMachineState *spapr, void *fdt,
         /* V3 MMU supports both hash and radix in tcg (with dynamic switching) */
         val[3] = 0xC0;
     }
+
+    if (spapr_get_cap(spapr, SPAPR_CAP_GTSE) == SPAPR_CAP_ON) {
+        val[7] = 0x40; /* OV5_MMU_RADIX_GTSE */
+    }
+
     _FDT(fdt_setprop(fdt, chosen, "ibm,arch-vec-5-platform-support",
                      val, sizeof(val)));
 }
@@ -2067,6 +2072,7 @@ static const VMStateDescription vmstate_spapr = {
         &vmstate_spapr_cap_fwnmi,
         &vmstate_spapr_fwnmi,
         &vmstate_spapr_cap_rpt_invalidate,
+        &vmstate_spapr_cap_gtse,
         NULL
     }
 };
@@ -2829,10 +2835,11 @@ static void spapr_machine_init(MachineState *machine)
         ppc_type_check_compat(machine->cpu_type, CPU_POWERPC_LOGICAL_3_00, 0,
                               spapr->max_compat_pvr)) {
         spapr_ovec_set(spapr->ov5, OV5_MMU_RADIX_300);
-        /* KVM and TCG always allow GTSE with radix... */
+    }
+
+    if (spapr_get_cap(spapr, SPAPR_CAP_GTSE) == SPAPR_CAP_ON) {
         spapr_ovec_set(spapr->ov5, OV5_MMU_RADIX_GTSE);
     }
-    /* ... but not with hash (currently). */
 
     if (kvm_enabled()) {
         /* Enable H_LOGICAL_CI_* so SLOF can talk to in-kernel devices */
@@ -4642,6 +4649,7 @@ static void spapr_machine_class_init(ObjectClass *oc, void *data)
     smc->default_caps.caps[SPAPR_CAP_CCF_ASSIST] = SPAPR_CAP_ON;
     smc->default_caps.caps[SPAPR_CAP_FWNMI] = SPAPR_CAP_ON;
     smc->default_caps.caps[SPAPR_CAP_RPT_INVALIDATE] = SPAPR_CAP_OFF;
+    smc->default_caps.caps[SPAPR_CAP_GTSE] = SPAPR_CAP_ON;
     spapr_caps_add_properties(smc);
     smc->irq = &spapr_irq_dual;
     smc->dr_phb_enabled = true;
