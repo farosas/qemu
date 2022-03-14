@@ -614,6 +614,43 @@ static void cap_rpt_invalidate_apply(SpaprMachineState *spapr,
     }
 }
 
+static void cap_gtse_apply(SpaprMachineState *spapr,
+                           uint8_t val, Error **errp)
+{
+    PowerPCCPU *cpu = POWERPC_CPU(first_cpu);
+
+    if (!ppc_check_compat(cpu, CPU_POWERPC_LOGICAL_3_00, 0,
+                          spapr->max_compat_pvr)) {
+        if (val) {
+            error_setg(errp, "GTSE only supported on POWER9 and later");
+            error_append_hint(errp,
+                              "Try appending -machine max-cpu-compat=power9\n");
+        }
+        return;
+    }
+
+    if (kvm_enabled()) {
+        if (!kvmppc_has_cap_mmu_radix()) {
+            error_setg(errp, "GTSE only supported with Radix MMU");
+            error_append_hint(errp,
+                              "Try omitting -machine cap-gtse\n");
+            return;
+        }
+
+        if (!val) {
+            error_setg(errp,
+                       "KVM implementation does not support disabling GTSE");
+            error_append_hint(errp,
+                              "Try appending -machine cap-gtse=on\n");
+        }
+    }
+
+    if (!val && tcg_enabled()) {
+        error_setg(errp, "TCG does not support disabling GTSE");
+        return;
+    }
+}
+
 SpaprCapabilityInfo capability_table[SPAPR_CAP_NUM] = {
     [SPAPR_CAP_HTM] = {
         .name = "htm",
@@ -730,6 +767,15 @@ SpaprCapabilityInfo capability_table[SPAPR_CAP_NUM] = {
         .set = spapr_cap_set_bool,
         .type = "bool",
         .apply = cap_rpt_invalidate_apply,
+    },
+    [SPAPR_CAP_GTSE] = {
+        .name = "gtse",
+        .description = "Advertise Radix GTSE support",
+        .index = SPAPR_CAP_GTSE,
+        .get = spapr_cap_get_bool,
+        .set = spapr_cap_set_bool,
+        .type = "bool",
+        .apply = cap_gtse_apply,
     },
 };
 
@@ -872,6 +918,7 @@ SPAPR_CAP_MIG_STATE(large_decr, SPAPR_CAP_LARGE_DECREMENTER);
 SPAPR_CAP_MIG_STATE(ccf_assist, SPAPR_CAP_CCF_ASSIST);
 SPAPR_CAP_MIG_STATE(fwnmi, SPAPR_CAP_FWNMI);
 SPAPR_CAP_MIG_STATE(rpt_invalidate, SPAPR_CAP_RPT_INVALIDATE);
+SPAPR_CAP_MIG_STATE(gtse, SPAPR_CAP_GTSE);
 
 void spapr_caps_init(SpaprMachineState *spapr)
 {
