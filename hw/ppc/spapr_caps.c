@@ -610,6 +610,13 @@ static void cap_rpt_invalidate_apply(SpaprMachineState *spapr,
             } else {
                 kvmppc_enable_h_rpt_invalidate();
             }
+        } else {
+            if (kvmppc_gtse_disabled()) {
+                error_setg(errp,
+                           "KVM implementation does not support GTSE");
+                error_append_hint(errp,
+                                  "Try appending -machine cap-gtse=off,cap-rpt-invalidate=on\n");
+            }
         }
     }
 }
@@ -634,16 +641,22 @@ static void cap_gtse_apply(SpaprMachineState *spapr,
             return;
         }
 
+        if (kvmppc_gtse_disabled()) {
+            if (val) {
+                error_setg(errp, "KVM implementation does not support GTSE");
+                error_append_hint(errp, "Try appending -machine cap-gtse=off\n");
+            }
+        } else {
+            if (!val) {
+                error_setg(errp, "KVM implementation does not support disabling GTSE");
+                error_append_hint(errp, "Try appending -machine cap-gtse=on\n");
+            }
+        }
+    } else {
         if (!val) {
-            error_setg(errp, "KVM implementation does not support disabling GTSE");
+            error_setg(errp, "TCG does not support disabling GTSE");
             error_append_hint(errp, "Try appending -machine cap-gtse=on\n");
         }
-    }
-
-    if (!val && tcg_enabled()) {
-        error_setg(errp, "TCG does not support disabling GTSE");
-        error_append_hint(errp, "Try appending -machine cap-gtse=on\n");
-        return;
     }
 }
 

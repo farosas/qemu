@@ -90,6 +90,7 @@ static int cap_ppc_nested_kvm_hv;
 static int cap_large_decr;
 static int cap_fwnmi;
 static int cap_rpt_invalidate;
+static int cap_gtse_disable;
 
 static uint32_t debug_inst_opcode;
 
@@ -154,6 +155,7 @@ int kvm_arch_init(MachineState *ms, KVMState *s)
     }
 
     cap_rpt_invalidate = kvm_vm_check_extension(s, KVM_CAP_PPC_RPT_INVALIDATE);
+    cap_gtse_disable = kvm_vm_check_extension(s, KVM_CAP_PPC_GTSE_DISABLE);
     kvm_ppc_register_host_cpu_type();
 
     return 0;
@@ -2395,6 +2397,11 @@ bool kvmppc_has_cap_mmu_radix(void)
 bool kvmppc_has_cap_mmu_hash_v3(void)
 {
     return cap_mmu_hash_v3;
+}
+
+bool kvmppc_gtse_disabled(void)
+{
+    return cap_gtse_disable;
 }
 
 static bool kvmppc_power8_host(void)
