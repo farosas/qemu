@@ -4648,7 +4648,13 @@ static void spapr_machine_class_init(ObjectClass *oc, void *data)
     smc->default_caps.caps[SPAPR_CAP_CCF_ASSIST] = SPAPR_CAP_ON;
     smc->default_caps.caps[SPAPR_CAP_FWNMI] = SPAPR_CAP_ON;
     smc->default_caps.caps[SPAPR_CAP_RPT_INVALIDATE] = SPAPR_CAP_OFF;
-    smc->default_caps.caps[SPAPR_CAP_GTSE] = SPAPR_CAP_ON;
+
+    if (kvm_enabled()) {
+        smc->default_caps.caps[SPAPR_CAP_GTSE] = SPAPR_CAP_OFF;
+    } else {
+        smc->default_caps.caps[SPAPR_CAP_GTSE] = SPAPR_CAP_ON;
+    }
+
     spapr_caps_add_properties(smc);
     smc->irq = &spapr_irq_dual;
     smc->dr_phb_enabled = true;
@@ -4725,10 +4731,15 @@ DEFINE_SPAPR_MACHINE(7_1, "7.1", true);
  */
 static void spapr_machine_7_0_class_options(MachineClass *mc)
 {
+    SpaprMachineClass *smc = SPAPR_MACHINE_CLASS(mc);
+
     spapr_machine_7_1_class_options(mc);
     compat_props_add(mc->compat_props, hw_compat_7_0, hw_compat_7_0_len);
-}
 
+    if (tcg_enabled()) {
+        smc->default_caps.caps[SPAPR_CAP_GTSE] = SPAPR_CAP_ON;
+    }
+}
 DEFINE_SPAPR_MACHINE(7_0, "7.0", false);
 
 /*
