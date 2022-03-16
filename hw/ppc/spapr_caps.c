@@ -637,7 +637,7 @@ static void cap_gtse_apply(SpaprMachineState *spapr,
             return;
         }
 
-        if (!val) {
+        if (!val && kvmppc_requires_gtse()) {
             error_setg(errp,
                        "KVM implementation does not support disabling GTSE");
             error_append_hint(errp,
