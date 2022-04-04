@@ -588,28 +588,28 @@ static void cap_rpt_invalidate_apply(SpaprMachineState *spapr,
 {
     ERRP_GUARD();
 
-    if (!val) {
-        /* capability disabled by default */
-        return;
-    }
-
-    if (tcg_enabled()) {
+    if (tcg_enabled() & val) {
         error_setg(errp, "No H_RPT_INVALIDATE support in TCG");
         error_append_hint(errp,
                           "Try appending -machine cap-rpt-invalidate=off\n");
-    } else if (kvm_enabled()) {
-        if (!kvmppc_has_cap_mmu_radix()) {
-            error_setg(errp, "H_RPT_INVALIDATE only supported on Radix");
-            return;
-        }
+        return;
+    }
 
-        if (!kvmppc_has_cap_rpt_invalidate()) {
-            error_setg(errp,
-                       "KVM implementation does not support H_RPT_INVALIDATE");
-            error_append_hint(errp,
-                              "Try appending -machine cap-rpt-invalidate=off\n");
-        } else {
-            kvmppc_enable_h_rpt_invalidate();
+    if (kvm_enabled()) {
+        if (val) {
+            if (!kvmppc_has_cap_mmu_radix()) {
+                error_setg(errp, "H_RPT_INVALIDATE only supported on Radix");
+                return;
+            }
+
+            if (!kvmppc_has_cap_rpt_invalidate()) {
+                error_setg(errp,
+                           "KVM implementation does not support H_RPT_INVALIDATE");
+                error_append_hint(errp,
+                                  "Try appending -machine cap-rpt-invalidate=off\n");
+            } else {
+                kvmppc_enable_h_rpt_invalidate();
+            }
         }
     }
 }
