@@ -944,11 +944,6 @@ static void timebase_save(PPCTimebase *tb)
     uint64_t ticks = cpu_get_host_ticks();
     PowerPCCPU *first_ppc_cpu = POWERPC_CPU(first_cpu);
 
-    if (!first_ppc_cpu->env.tb_env) {
-        error_report("No timebase object");
-        return;
-    }
-
     /* not used anymore, we keep it for compatibility */
     tb->time_of_the_day_ns = qemu_clock_get_ns(QEMU_CLOCK_HOST);
 
@@ -961,28 +956,15 @@ static void timebase_save(PPCTimebase *tb)
 static void timebase_load(PPCTimebase *tb)
 {
     CPUState *cpu;
-    PowerPCCPU *first_ppc_cpu = POWERPC_CPU(first_cpu);
-    int64_t tb_off_adj, tb_off;
-    unsigned long freq;
-
-    if (!first_ppc_cpu->env.tb_env) {
-        error_report("No timebase object");
-        return;
-    }
-
-    freq = first_ppc_cpu->env.tb_env->tb_freq;
+    int64_t tb_off_adj;
 
     tb_off_adj = tb->guest_timebase - cpu_get_host_ticks();
-
-    tb_off = first_ppc_cpu->env.tb_env->tb_offset;
-    trace_ppc_tb_adjust(tb_off, tb_off_adj, tb_off_adj - tb_off,
-                        (tb_off_adj - tb_off) / freq);
 
     /* Set new offset to all CPUs */
     CPU_FOREACH(cpu) {
         PowerPCCPU *pcpu = POWERPC_CPU(cpu);
-        pcpu->env.tb_env->tb_offset = tb_off_adj;
-        kvmppc_set_reg_tb_offset(pcpu, pcpu->env.tb_env->tb_offset);
+
+        kvmppc_set_reg_tb_offset(pcpu, tb_off_adj);
     }
 }
 

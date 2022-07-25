@@ -96,7 +96,6 @@ vof_avail(uint64_t start, uint64_t end, uint64_t size) "0x%"PRIx64"..0x%"PRIx64"
 vof_claimed(uint64_t start, uint64_t end, uint64_t size) "0x%"PRIx64"..0x%"PRIx64" size=0x%"PRIx64
 
 # ppc.c
-ppc_tb_adjust(uint64_t offs1, uint64_t offs2, int64_t diff, int64_t seconds) "adjusted from 0x%"PRIx64" to 0x%"PRIx64", diff %"PRId64" (%"PRId64"s)"
 ppc_tb_load(uint64_t tb) "tb 0x%016" PRIx64
 ppc_tb_store(uint64_t tb, uint64_t offset) "tb 0x%016" PRIx64 " offset 0x%08" PRIx64
 
