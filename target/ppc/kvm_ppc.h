@@ -86,6 +86,9 @@ void kvm_check_mmu(PowerPCCPU *cpu, Error **errp);
 void kvmppc_set_reg_ppc_online(PowerPCCPU *cpu, unsigned int online);
 void kvmppc_set_reg_tb_offset(PowerPCCPU *cpu, int64_t tb_offset);
 uint64_t kvmppc_get_reg_tb_offset(PowerPCCPU *cpu);
+void kvmppc_clock_vm_state_change(void *opaque, bool running,
+				  RunState state);
+void kvmppc_timebase_save(PPCTimebase *tb);
 
 int kvm_handle_nmi(PowerPCCPU *cpu, struct kvm_run *run);
 
@@ -296,6 +299,17 @@ static inline void kvmppc_read_hptes(ppc_hash_pte64_t *hptes,
 static inline void kvmppc_write_hpte(hwaddr ptex, uint64_t pte0, uint64_t pte1)
 {
     abort();
+}
+
+static inline void kvmppc_clock_vm_state_change(void *opaque, bool running,
+						RunState state)
+{
+    g_assert_not_reached();
+}
+
+static inline void kvmppc_timebase_save(PPCTimebase *tb)
+{
+    g_assert_not_reached();
 }
 
 #endif /* !CONFIG_USER_ONLY */

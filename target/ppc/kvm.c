@@ -2973,3 +2973,44 @@ bool kvm_arch_cpu_check_are_resettable(void)
 {
     return true;
 }
+
+void kvmppc_timebase_save(PPCTimebase *tb)
+{
+    uint64_t ticks = cpu_get_host_ticks();
+    PowerPCCPU *first_ppc_cpu = POWERPC_CPU(first_cpu);
+
+    /* not used anymore, we keep it for compatibility */
+    tb->time_of_the_day_ns = qemu_clock_get_ns(QEMU_CLOCK_HOST);
+
+    tb->guest_timebase = ticks + kvmppc_get_reg_tb_offset(first_ppc_cpu);
+
+    tb->runstate_paused =
+        runstate_check(RUN_STATE_PAUSED) || runstate_check(RUN_STATE_SAVE_VM);
+}
+
+static void kvmppc_timebase_load(PPCTimebase *tb)
+{
+    CPUState *cpu;
+    int64_t tb_off_adj;
+
+    tb_off_adj = tb->guest_timebase - cpu_get_host_ticks();
+
+    /* Set new offset to all CPUs */
+    CPU_FOREACH(cpu) {
+        PowerPCCPU *pcpu = POWERPC_CPU(cpu);
+
+        kvmppc_set_reg_tb_offset(pcpu, tb_off_adj);
+    }
+}
+
+void kvmppc_clock_vm_state_change(void *opaque, bool running,
+                                  RunState state)
+{
+    PPCTimebase *tb = opaque;
+
+    if (running) {
+        kvmppc_timebase_load(tb);
+    } else {
+        kvmppc_timebase_save(tb);
+    }
+}

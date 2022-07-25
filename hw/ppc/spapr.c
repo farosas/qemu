@@ -2712,6 +2712,44 @@ static void spapr_create_nvdimm_dr_connectors(SpaprMachineState *spapr)
     }
 }
 
+/*
+ * When migrating a running guest, read the clock just
+ * before migration, so that the guest clock counts
+ * during the events between:
+ *
+ *  * vm_stop()
+ *  *
+ *  * pre_save()
+ *
+ *  This reduces clock difference on migration from 5s
+ *  to 0.1s (when max_downtime == 5s), because sending the
+ *  final pages of memory (which happens between vm_stop()
+ *  and pre_save()) takes max_downtime.
+ */
+static int timebase_pre_save(void *opaque)
+{
+    PPCTimebase *tb = opaque;
+
+    /* guest_timebase won't be overridden in case of paused guest or savevm */
+    if (!tb->runstate_paused) {
+        kvmppc_timebase_save(tb);
+    }
+
+    return 0;
+}
+
+const VMStateDescription vmstate_ppc_timebase = {
+    .name = "timebase",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .pre_save = timebase_pre_save,
+    .fields      = (VMStateField []) {
+        VMSTATE_UINT64(guest_timebase, PPCTimebase),
+        VMSTATE_INT64(time_of_the_day_ns, PPCTimebase),
+        VMSTATE_END_OF_LIST()
+    },
+};
+
 /* pSeries LPAR / sPAPR hardware init */
 static void spapr_machine_init(MachineState *machine)
 {
@@ -3052,7 +3090,7 @@ static void spapr_machine_init(MachineState *machine)
 
     if (kvm_enabled()) {
         /* to stop and start vmclock */
-        qemu_add_vm_change_state_handler(cpu_ppc_clock_vm_state_change,
+        qemu_add_vm_change_state_handler(kvmppc_clock_vm_state_change,
                                          &spapr->tb);
 
         kvmppc_spapr_enable_inkernel_multitce();
