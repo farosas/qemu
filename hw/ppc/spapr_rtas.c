@@ -186,12 +186,15 @@ static void rtas_start_cpu(PowerPCCPU *callcpu, SpaprMachineState *spapr,
     }
     ppc_store_lpcr(newcpu, lpcr);
 
-    /*
-     * Set the timebase offset of the new CPU to that of the invoking
-     * CPU.  This helps hotplugged CPU to have the correct timebase
-     * offset.
-     */
-    newcpu->env.tb_env->tb_offset = callcpu->env.tb_env->tb_offset;
+    /* For KVM this is set lazily at migration time */
+    if (!kvm_enabled()) {
+        /*
+         * Set the timebase offset of the new CPU to that of the invoking
+         * CPU.  This helps hotplugged CPU to have the correct timebase
+         * offset.
+         */
+        newcpu->env.tb_env->tb_offset = callcpu->env.tb_env->tb_offset;
+    }
 
     spapr_cpu_set_entry_state(newcpu, start, 0, r3, 0);
 

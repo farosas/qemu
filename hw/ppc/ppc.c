@@ -951,11 +951,8 @@ static void timebase_save(PPCTimebase *tb)
 
     /* not used anymore, we keep it for compatibility */
     tb->time_of_the_day_ns = qemu_clock_get_ns(QEMU_CLOCK_HOST);
-    /*
-     * tb_offset is only expected to be changed by QEMU so
-     * there is no need to update it from KVM here
-     */
-    tb->guest_timebase = ticks + first_ppc_cpu->env.tb_env->tb_offset;
+
+    tb->guest_timebase = ticks + kvmppc_get_reg_tb_offset(first_ppc_cpu);
 
     tb->runstate_paused =
         runstate_check(RUN_STATE_PAUSED) || runstate_check(RUN_STATE_SAVE_VM);

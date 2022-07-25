@@ -999,8 +999,6 @@ int kvm_arch_put_registers(CPUState *cs, int level)
             }
         }
 
-        kvm_set_one_reg(cs, KVM_REG_PPC_TB_OFFSET, &env->tb_env->tb_offset);
-
         if (level > KVM_PUT_RUNTIME_STATE) {
             kvm_put_one_spr(cs, KVM_REG_PPC_DPDES, SPR_DPDES);
         }
@@ -1307,7 +1305,6 @@ int kvm_arch_get_registers(CPUState *cs)
             }
         }
 
-        kvm_get_one_reg(cs, KVM_REG_PPC_TB_OFFSET, &env->tb_env->tb_offset);
         kvm_get_one_spr(cs, KVM_REG_PPC_DPDES, SPR_DPDES);
 #endif
     }
@@ -2960,6 +2957,16 @@ void kvmppc_set_reg_tb_offset(PowerPCCPU *cpu, int64_t tb_offset)
     if (kvm_enabled()) {
         kvm_set_one_reg(cs, KVM_REG_PPC_TB_OFFSET, &tb_offset);
     }
+}
+
+uint64_t kvmppc_get_reg_tb_offset(PowerPCCPU *cpu)
+{
+    CPUState *cs = CPU(cpu);
+    uint64_t tb_offset;
+
+    kvm_get_one_reg(cs, KVM_REG_PPC_TB_OFFSET, &tb_offset);
+
+    return tb_offset;
 }
 
 bool kvm_arch_cpu_check_are_resettable(void)
