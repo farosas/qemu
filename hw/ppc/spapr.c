@@ -2712,6 +2712,22 @@ static void spapr_create_nvdimm_dr_connectors(SpaprMachineState *spapr)
     }
 }
 
+static bool decrementer_needed(void *opaque)
+{
+    return kvm_enabled();
+}
+
+const VMStateDescription vmstate_ppc_decrementer = {
+    .name = "decrementer",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .needed = decrementer_needed,
+    .fields      = (VMStateField []) {
+        VMSTATE_UINT64(decr_expiry, PPCTimebase),
+        VMSTATE_END_OF_LIST()
+    },
+};
+
 /*
  * When migrating a running guest, read the clock just
  * before migration, so that the guest clock counts
@@ -2743,11 +2759,15 @@ const VMStateDescription vmstate_ppc_timebase = {
     .version_id = 1,
     .minimum_version_id = 1,
     .pre_save = timebase_pre_save,
-    .fields      = (VMStateField []) {
+    .fields = (VMStateField []) {
         VMSTATE_UINT64(guest_timebase, PPCTimebase),
         VMSTATE_INT64(time_of_the_day_ns, PPCTimebase),
         VMSTATE_END_OF_LIST()
     },
+    .subsections = (const VMStateDescription * []) {
+        &vmstate_ppc_decrementer,
+        NULL
+    }
 };
 
 /* pSeries LPAR / sPAPR hardware init */
