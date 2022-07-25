@@ -2991,7 +2991,7 @@ void kvmppc_timebase_save(PPCTimebase *tb)
 static void kvmppc_timebase_load(PPCTimebase *tb)
 {
     CPUState *cpu;
-    int64_t tb_off_adj;
+    uint64_t tb_off_adj;
 
     tb_off_adj = tb->guest_timebase - cpu_get_host_ticks();
 
