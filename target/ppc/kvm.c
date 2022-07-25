@@ -2950,25 +2950,6 @@ void kvmppc_set_reg_ppc_online(PowerPCCPU *cpu, unsigned int online)
     }
 }
 
-void kvmppc_set_reg_tb_offset(PowerPCCPU *cpu, int64_t tb_offset)
-{
-    CPUState *cs = CPU(cpu);
-
-    if (kvm_enabled()) {
-        kvm_set_one_reg(cs, KVM_REG_PPC_TB_OFFSET, &tb_offset);
-    }
-}
-
-uint64_t kvmppc_get_reg_tb_offset(PowerPCCPU *cpu)
-{
-    CPUState *cs = CPU(cpu);
-    uint64_t tb_offset;
-
-    kvm_get_one_reg(cs, KVM_REG_PPC_TB_OFFSET, &tb_offset);
-
-    return tb_offset;
-}
-
 bool kvm_arch_cpu_check_are_resettable(void)
 {
     return true;
@@ -2977,12 +2958,13 @@ bool kvm_arch_cpu_check_are_resettable(void)
 void kvmppc_timebase_save(PPCTimebase *tb)
 {
     uint64_t ticks = cpu_get_host_ticks();
-    PowerPCCPU *first_ppc_cpu = POWERPC_CPU(first_cpu);
+    uint64_t tb_offset;
 
     /* not used anymore, we keep it for compatibility */
     tb->time_of_the_day_ns = qemu_clock_get_ns(QEMU_CLOCK_HOST);
 
-    tb->guest_timebase = ticks + kvmppc_get_reg_tb_offset(first_ppc_cpu);
+    kvm_get_one_reg(first_cpu, KVM_REG_PPC_TB_OFFSET, &tb_offset);
+    tb->guest_timebase = ticks + tb_offset;
 
     tb->runstate_paused =
         runstate_check(RUN_STATE_PAUSED) || runstate_check(RUN_STATE_SAVE_VM);
@@ -2997,9 +2979,7 @@ static void kvmppc_timebase_load(PPCTimebase *tb)
 
     /* Set new offset to all CPUs */
     CPU_FOREACH(cpu) {
-        PowerPCCPU *pcpu = POWERPC_CPU(cpu);
-
-        kvmppc_set_reg_tb_offset(pcpu, tb_off_adj);
+        kvm_set_one_reg(cpu, KVM_REG_PPC_TB_OFFSET, &tb_off_adj);
     }
 }
 
