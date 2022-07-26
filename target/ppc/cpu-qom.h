@@ -191,6 +191,7 @@ typedef struct PPCTimebase {
     int64_t time_of_the_day_ns;
     bool runstate_paused;
     uint64_t decr_expiry;
+    uint64_t vtb;
 } PPCTimebase;
 
 extern const VMStateDescription vmstate_ppc_timebase;

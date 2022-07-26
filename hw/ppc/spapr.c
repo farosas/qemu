@@ -2728,6 +2728,22 @@ const VMStateDescription vmstate_ppc_decrementer = {
     },
 };
 
+static bool vtb_needed(void *opaque)
+{
+    return kvm_enabled();
+}
+
+const VMStateDescription vmstate_ppc_vtb = {
+    .name = "vtb",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .needed = vtb_needed,
+    .fields      = (VMStateField []) {
+        VMSTATE_UINT64(vtb, PPCTimebase),
+        VMSTATE_END_OF_LIST()
+    },
+};
+
 /*
  * When migrating a running guest, read the clock just
  * before migration, so that the guest clock counts
@@ -2766,6 +2782,7 @@ const VMStateDescription vmstate_ppc_timebase = {
     },
     .subsections = (const VMStateDescription * []) {
         &vmstate_ppc_decrementer,
+        &vmstate_ppc_vtb,
         NULL
     }
 };

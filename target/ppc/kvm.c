@@ -2967,6 +2967,7 @@ void kvmppc_timebase_save(PPCTimebase *tb)
     tb->guest_timebase = ticks + tb_offset;
 
     kvm_get_one_reg(first_cpu, KVM_REG_PPC_DEC_EXPIRY, &tb->decr_expiry);
+    kvm_get_one_reg(first_cpu, KVM_REG_PPC_VTB, &tb->vtb);
 
     tb->runstate_paused =
         runstate_check(RUN_STATE_PAUSED) || runstate_check(RUN_STATE_SAVE_VM);
@@ -2983,6 +2984,7 @@ static void kvmppc_timebase_load(PPCTimebase *tb)
     CPU_FOREACH(cpu) {
         kvm_set_one_reg(cpu, KVM_REG_PPC_TB_OFFSET, &tb_off_adj);
         kvm_set_one_reg(cpu, KVM_REG_PPC_DEC_EXPIRY, &tb->decr_expiry);
+        kvm_set_one_reg(cpu, KVM_REG_PPC_VTB, &tb->vtb);
     }
 }
 
