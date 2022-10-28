@@ -2260,6 +2260,7 @@ void migrate_init(MigrationState *s)
     error_free(s->error);
     s->error = NULL;
     s->hostname = NULL;
+    s->vmdesc = NULL;
 
     migrate_set_state(&s->state, MIGRATION_STATUS_NONE, MIGRATION_STATUS_SETUP);
 
@@ -4335,6 +4336,8 @@ void migrate_fd_connect(MigrationState *s, Error *error_in)
      * dumped when calling migrate_fd_cleanup().
      */
     migrate_error_free(s);
+
+    s->vmdesc = json_writer_new(false);
 
     s->expected_downtime = s->parameters.downtime_limit;
     if (resume) {
