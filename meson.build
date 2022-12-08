@@ -2555,6 +2555,9 @@ foreach target : target_dirs
       endif
       accel_kconfig += [ sym + '=y' ]
     endif
+    if get_option('force_kvm')
+        accel_kconfig += [ 'CONFIG_KVM=y' ]
+    endif
   endforeach
   if accel_kconfig.length() == 0
     if default_targets
