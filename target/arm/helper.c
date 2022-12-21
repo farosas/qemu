@@ -6368,6 +6368,7 @@ int sme_exception_el(CPUARMState *env, int el)
     return 0;
 }
 
+#ifdef CONFIG_TCG
 /* This corresponds to the ARM pseudocode function IsFullA64Enabled(). */
 static bool sme_fa64(CPUARMState *env, int el)
 {
@@ -6393,6 +6394,7 @@ static bool sme_fa64(CPUARMState *env, int el)
 
     return true;
 }
+#endif
 
 /*
  * Given that SVE is enabled, return the vector length for EL.
@@ -10514,6 +10516,7 @@ int aa64_va_parameter_tbid(uint64_t tcr, ARMMMUIdx mmu_idx)
     }
 }
 
+#ifdef CONFIG_TCG
 static int aa64_va_parameter_tcma(uint64_t tcr, ARMMMUIdx mmu_idx)
 {
     if (regime_has_2_ranges(mmu_idx)) {
@@ -10523,6 +10526,7 @@ static int aa64_va_parameter_tcma(uint64_t tcr, ARMMMUIdx mmu_idx)
         return extract32(tcr, 30, 1) * 3;
     }
 }
+#endif
 
 static ARMGranuleSize tg0_to_gran_size(int tg)
 {
@@ -11225,6 +11229,7 @@ ARMMMUIdx arm_mmu_idx(CPUARMState *env)
     return arm_mmu_idx_el(env, arm_current_el(env));
 }
 
+#ifdef CONFIG_TCG
 static CPUARMTBFlags rebuild_hflags_common(CPUARMState *env, int fp_el,
                                            ARMMMUIdx mmu_idx,
                                            CPUARMTBFlags flags)
@@ -11487,12 +11492,20 @@ static CPUARMTBFlags rebuild_hflags_internal(CPUARMState *env)
         return rebuild_hflags_a32(env, fp_el, mmu_idx);
     }
 }
+#endif
 
+#ifdef CONFIG_TCG
 void arm_rebuild_hflags(CPUARMState *env)
 {
     env->hflags = rebuild_hflags_internal(env);
 }
+#else
+void arm_rebuild_hflags(CPUARMState *env)
+{
+}
+#endif
 
+#ifdef CONFIG_TCG
 /*
  * If we have triggered a EL state change we can't rely on the
  * translator having passed it to us, we need to recompute.
@@ -11666,7 +11679,7 @@ void cpu_get_tb_cpu_state(CPUARMState *env, target_ulong *pc,
     *pflags = flags.flags;
     *cs_base = flags.flags2;
 }
-
+#endif
 #ifdef TARGET_AARCH64
 /*
  * The manual says that when SVE is enabled and VQ is widened the
