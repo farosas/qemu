@@ -1134,6 +1134,7 @@ typedef struct ARMCacheAttrs {
     bool guarded:1;              /* guarded bit of the v8-64 PTE */
 } ARMCacheAttrs;
 
+#ifdef CONFIG_TCG
 /* Fields that are valid upon success. */
 typedef struct GetPhysAddrResult {
     CPUTLBEntryFull f;
@@ -1189,6 +1190,7 @@ bool pmsav8_mpu_lookup(CPUARMState *env, uint32_t address,
                        MMUAccessType access_type, ARMMMUIdx mmu_idx,
                        bool is_secure, GetPhysAddrResult *result,
                        ARMMMUFaultInfo *fi, uint32_t *mregion);
+#endif /* CONFIG_TCG */
 
 void arm_log_exception(CPUState *cs);
 

@@ -47,4 +47,5 @@ arm_ss.add(when: 'TARGET_AARCH64', if_true: files(
 
 arm_softmmu_ss.add(files(
   'psci.c',
+  'ptw.c',
 ))
