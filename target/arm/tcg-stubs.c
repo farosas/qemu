@@ -10,6 +10,7 @@
 #include "qemu/osdep.h"
 #include "cpu.h"
 #include "internals.h"
+#include "exec/memattrs.h"
 
 void write_v7m_exception(CPUARMState *env, uint32_t new_exc)
 {
@@ -23,4 +24,21 @@ void arm_rebuild_hflags(CPUARMState *env)
 
 void assert_hflags_rebuild_correctly(CPUARMState *env)
 {
+}
+
+void raise_exception_ra(CPUARMState *env, uint32_t excp, uint32_t syndrome,
+                        uint32_t target_el, uintptr_t ra)
+{
+    g_assert_not_reached();
+}
+
+void arm_reset_sve_state(CPUARMState *env)
+{
+    g_assert_not_reached();
+}
+
+hwaddr arm_cpu_get_phys_page_attrs_debug(CPUState *cs, vaddr addr,
+                                         MemTxAttrs *attrs)
+{
+    return 0;
 }
