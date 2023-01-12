@@ -253,6 +253,10 @@ class QemuBaseTest(avocado.Test):
         if self.qemu_bin is None:
             self.cancel("No QEMU binary defined or found in the build tree")
 
+        accel_required = self._get_unique_tag_val('accel')
+        if accel_required:
+            self.require_accelerator(accel_required)
+
     def fetch_asset(self, name,
                     asset_hash=None, algorithm=None,
                     locations=None, expire=None,
