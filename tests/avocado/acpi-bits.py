@@ -132,6 +132,7 @@ class AcpiBitsTest(QemuBaseTest): #pylint: disable=too-many-instance-attributes
 
     :avocado: tags=arch:x86_64
     :avocado: tags=acpi
+    :avocado: tags=accel:tcg
 
     """
     # in slower systems the test can take as long as 3 minutes to complete.
