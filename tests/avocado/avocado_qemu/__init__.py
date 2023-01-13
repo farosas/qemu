@@ -265,18 +265,6 @@ class QemuBaseTest(avocado.Test):
                         find_only=find_only,
                         cancel_on_missing=cancel_on_missing)
 
-
-class QemuSystemTest(QemuBaseTest):
-    """Facilitates system emulation tests."""
-
-    def setUp(self):
-        self._vms = {}
-
-        super().setUp('qemu-system-')
-
-        self.machine = self.params.get('machine',
-                                       default=self._get_unique_tag_val('machine'))
-
     def require_accelerator(self, accelerator):
         """
         Requires an accelerator to be available for the test to continue
@@ -298,6 +286,18 @@ class QemuSystemTest(QemuBaseTest):
         if not checker(qemu_bin=self.qemu_bin):
             self.cancel("%s accelerator does not seem to be "
                         "available" % accelerator)
+
+
+class QemuSystemTest(QemuBaseTest):
+    """Facilitates system emulation tests."""
+
+    def setUp(self):
+        self._vms = {}
+
+        super().setUp('qemu-system-')
+
+        self.machine = self.params.get('machine',
+                                       default=self._get_unique_tag_val('machine'))
 
     def require_netdev(self, netdevname):
         netdevhelp = run_cmd([self.qemu_bin,
