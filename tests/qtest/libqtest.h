@@ -76,6 +76,17 @@ QTestState *qtest_init_without_qmp_handshake(const char *extra_args);
 QTestState *qtest_init_with_serial(const char *extra_args, int *sock_fd);
 
 /**
+ * qtest_get_machine_args:
+ * @mname: the machine name.
+ * @cname: the cpu name.
+ * @extra_args: other arguments to concatenated in the args string.
+ *
+ * Returns: pointer to args.
+ */
+char *qtest_get_machine_args(const char *mname, const char *cname,
+                             const char *extra_args);
+
+/**
  * qtest_wait_qemu:
  * @s: #QTestState instance to operate on.
  *

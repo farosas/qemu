@@ -1265,7 +1265,56 @@ static bool qtest_is_old_versioned_machine(const char *mname)
 struct MachInfo {
     char *name;
     char *alias;
+    char *default_cpu;
 };
+
+static char *qtest_get_cpu_name(QString *type)
+{
+    QDict *response, *cpuinfo;
+    QList *list;
+    const QListEntry *p;
+    QObject *qobj;
+    QString *qstr;
+    QTestState *qts;
+    char *cname = NULL;
+
+    qts = qtest_init("-machine none");
+    response = qtest_qmp(qts, "{ 'execute': 'query-cpu-definitions' }");
+    g_assert(response);
+    list = qdict_get_qlist(response, "return");
+
+    if (!list) {
+        /* Not all architectures implement query-cpu-definitions */
+        goto out;
+    }
+
+    for (p = qlist_first(list); p; p = qlist_next(p)) {
+        cpuinfo = qobject_to(QDict, qlist_entry_obj(p));
+        g_assert(cpuinfo);
+
+        qobj = qdict_get(cpuinfo, "typename");
+        g_assert(qobj);
+        qstr = qobject_to(QString, qobj);
+        g_assert(qstr);
+
+        if (g_str_equal(qstring_get_str(qstr),
+                        qstring_get_str(type))) {
+            qobj = qdict_get(cpuinfo, "name");
+            g_assert(qobj);
+            qstr = qobject_to(QString, qobj);
+            g_assert(qstr);
+
+            cname = g_strdup(qstring_get_str(qstr));
+            break;
+        }
+    }
+
+out:
+    qtest_quit(qts);
+    qobject_unref(response);
+
+    return cname;
+}
 
 /*
  * Returns an array with pointers to the available machine names.
@@ -1312,6 +1361,15 @@ static struct MachInfo *qtest_get_machines(void)
         } else {
             machines[idx].alias = NULL;
         }
+
+        qobj = qdict_get(minfo, "default-cpu-type");
+        if (qobj) {                           /* The default cpu is optional */
+            qstr = qobject_to(QString, qobj);
+            g_assert(qstr);
+            machines[idx].default_cpu = qtest_get_cpu_name(qstr);
+        } else {
+            machines[idx].default_cpu = NULL;
+        }
     }
 
     qtest_quit(qts);
@@ -1319,6 +1377,47 @@ static struct MachInfo *qtest_get_machines(void)
 
     memset(&machines[idx], 0, sizeof(struct MachInfo)); /* Terminating entry */
     return machines;
+}
+
+static const char *qtest_get_default_cpu(const char* machine)
+{
+    struct MachInfo *machines;
+    char *cpu = NULL;
+    int i;
+
+    if (g_str_equal(machine, "none")) {
+        return cpu;
+    }
+
+    machines = qtest_get_machines();
+
+    for (i = 0; machines[i].name != NULL; i++) {
+        if (g_str_equal(machines[i].name, machine)) {
+            cpu = machines[i].default_cpu;
+            break;
+        }
+    }
+
+    return cpu;
+}
+
+char *qtest_get_machine_args(const char *mname, const char *cname,
+                             const char *extra_args)
+{
+    const char *cpu;
+
+    cpu = cname ?: qtest_get_default_cpu(mname);
+    if (!cpu) {
+        /*
+         * There is no default cpu and the test did not provide a cpu
+         * name for this architecture/machine combination. The QEMU
+         * binary might still know how to select a cpu, so leave the
+         * -cpu option out.
+         */
+        return g_strdup_printf("-machine %s %s", mname, extra_args ?: "");
+    }
+    return g_strdup_printf("-machine %s -cpu %s %s", mname, cpu,
+                           extra_args ?: "");
 }
 
 void qtest_cb_for_every_machine(void (*cb)(const char *machine),
