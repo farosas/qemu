@@ -559,6 +559,7 @@ int main(int argc, char **argv)
 
     if (g_str_equal(arch, "aarch64")) {
         g_string_append(args, " -machine virt");
+        g_string_append(args, " -cpu cortex-a57");
     }
 
     g_test_init(&argc, &argv, NULL);
