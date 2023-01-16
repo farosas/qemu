@@ -78,14 +78,28 @@ static void test_properties(QTestState *qts, const char *path, bool recurse)
     qobject_unref(response);
 }
 
+static const char *arch_get_cpu(const char *machine)
+{
+    const char *arch = qtest_get_arch();
+
+    if (g_str_equal(arch, "aarch64")) {
+        if (!strncmp(machine, "virt", 4)) {
+            return "cortex-a57";
+        }
+    }
+
+    return NULL;
+}
+
 static void test_machine(gconstpointer data)
 {
     const char *machine = data;
+    char *args;
     QDict *response;
     QTestState *qts;
 
-    qts = qtest_initf("-machine %s", machine);
-
+    args = qtest_get_machine_args(machine, arch_get_cpu(machine), NULL);
+    qts = qtest_init(args);
     test_properties(qts, "/machine", true);
 
     response = qtest_qmp(qts, "{ 'execute': 'quit' }");
@@ -94,6 +108,7 @@ static void test_machine(gconstpointer data)
 
     qtest_quit(qts);
     g_free((void *)machine);
+    g_free((void *)args);
 }
 
 static void add_machine_test_case(const char *mname)
