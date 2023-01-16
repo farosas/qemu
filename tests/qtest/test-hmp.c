@@ -121,21 +121,49 @@ static void test_info_commands(QTestState *qts)
     g_free(info_buf);
 }
 
+static const char *arch_get_cpu(const char *machine)
+{
+    const char *arch = qtest_get_arch();
+
+    if (g_str_equal(arch, "aarch64")) {
+        if (!strncmp(machine, "virt", 4)) {
+            return "cortex-a57";
+        }
+    }
+
+    return NULL;
+}
+
 static void test_machine(gconstpointer data)
 {
     const char *machine = data;
     char *args;
     QTestState *qts;
 
-    args = g_strdup_printf("-S -M %s", machine);
+    args = qtest_get_machine_args(machine, arch_get_cpu(machine), "-S");
     qts = qtest_init(args);
 
     test_info_commands(qts);
     test_commands(qts);
 
     qtest_quit(qts);
-    g_free(args);
     g_free((void *)data);
+    g_free((void *)args);
+}
+
+static void test_none_with_memory(void)
+{
+    QTestState *qts;
+    char *args;
+
+    args = qtest_get_machine_args("none", NULL, "-S -m 2");
+    qts = qtest_init(args);
+
+    test_info_commands(qts);
+    test_commands(qts);
+
+    qtest_quit(qts);
+    g_free((void *)args);
 }
 
 static void add_machine_test_case(const char *mname)
@@ -160,7 +188,7 @@ int main(int argc, char **argv)
     qtest_cb_for_every_machine(add_machine_test_case, g_test_quick());
 
     /* as none machine has no memory by default, add a test case with memory */
-    qtest_add_data_func("hmp/none+2MB", g_strdup("none -m 2"), test_machine);
+    qtest_add_func("hmp/none+2MB", test_none_with_memory);
 
     return g_test_run();
 }
