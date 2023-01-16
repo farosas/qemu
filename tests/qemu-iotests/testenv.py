@@ -244,6 +244,13 @@ class TestEnv(ContextManager['TestEnv']):
             if self.qemu_prog.endswith(f'qemu-system-{suffix}'):
                 self.qemu_options += f' -machine {machine}'
 
+        cpu_map = (
+            ('aarch64', 'cortex-a57'),
+        )
+        for suffix, cpu in cpu_map:
+            if self.qemu_prog.endswith(f'qemu-system-{suffix}'):
+                self.qemu_options += f' -cpu {cpu}'
+
         # QEMU_DEFAULT_MACHINE
         self.qemu_default_machine = get_default_machine(self.qemu_prog)
 
