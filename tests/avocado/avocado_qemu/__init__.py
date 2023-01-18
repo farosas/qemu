@@ -241,17 +241,24 @@ class QemuBaseTest(avocado.Test):
         return None
 
     def setUp(self, bin_prefix):
-        self.arch = self.params.get('arch',
-                                    default=self._get_unique_tag_val('arch'))
-
-        self.cpu = self.params.get('cpu',
-                                   default=self._get_unique_tag_val('cpu'))
+        self.arch = self.get_param('arch')
+        self.cpu = self.get_param('cpu')
 
         default_qemu_bin = pick_default_qemu_bin(bin_prefix, arch=self.arch)
         self.qemu_bin = self.params.get('qemu_bin',
                                         default=default_qemu_bin)
         if self.qemu_bin is None:
             self.cancel("No QEMU binary defined or found in the build tree")
+
+    def get_param(self, name):
+        """
+        Get a test parameter. Tags take precedence over command line
+        parameters.
+        """
+        param = self._get_unique_tag_val(name)
+        if not param:
+            param = self.params.get(name)
+        return param
 
     def fetch_asset(self, name,
                     asset_hash=None, algorithm=None,
@@ -274,8 +281,7 @@ class QemuSystemTest(QemuBaseTest):
 
         super().setUp('qemu-system-')
 
-        self.machine = self.params.get('machine',
-                                       default=self._get_unique_tag_val('machine'))
+        self.machine = self.get_param('machine')
 
     def require_accelerator(self, accelerator):
         """
@@ -529,15 +535,11 @@ class LinuxTest(LinuxSSHMixIn, QemuSystemTest):
     memory = '1024'
 
     def _set_distro(self):
-        distro_name = self.params.get(
-            'distro',
-            default=self._get_unique_tag_val('distro'))
+        distro_name = self.get_param('distro')
         if not distro_name:
             distro_name = 'fedora'
 
-        distro_version = self.params.get(
-            'distro_version',
-            default=self._get_unique_tag_val('distro_version'))
+        distro_version = self.get_params('distro_version')
         if not distro_version:
             distro_version = '31'
 
