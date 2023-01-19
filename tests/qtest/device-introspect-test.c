@@ -304,17 +304,30 @@ static void test_abstract_interfaces(void)
     qtest_quit(qts);
 }
 
+static const char *arch_get_cpu(const char *mname)
+{
+    const char *arch = qtest_get_arch();
+
+    if (g_str_equal(arch, "aarch64")) {
+        if (!strncmp(mname, "virt", 4)) {
+            return "cortex-a57";
+        }
+    }
+
+    return NULL;
+}
+
 static void add_machine_test_case(const char *mname)
 {
     char *path, *args;
 
     path = g_strdup_printf("device/introspect/concrete/defaults/%s", mname);
-    args = g_strdup_printf("-M %s", mname);
+    args = qtest_get_machine_args(mname, arch_get_cpu(mname), NULL);
     qtest_add_data_func(path, args, test_device_intro_concrete);
     g_free(path);
 
     path = g_strdup_printf("device/introspect/concrete/nodefaults/%s", mname);
-    args = g_strdup_printf("-nodefaults -M %s", mname);
+    args = qtest_get_machine_args(mname, arch_get_cpu(mname), "-nodefaults");
     qtest_add_data_func(path, args, test_device_intro_concrete);
     g_free(path);
 }
