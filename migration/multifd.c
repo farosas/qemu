@@ -17,6 +17,7 @@
 #include "exec/ramblock.h"
 #include "qemu/error-report.h"
 #include "qapi/error.h"
+#include "file.h"
 #include "ram.h"
 #include "migration.h"
 #include "migration-stats.h"
@@ -28,6 +29,7 @@
 #include "threadinfo.h"
 #include "options.h"
 #include "qemu/yank.h"
+#include "io/channel-file.h"
 #include "io/channel-socket.h"
 #include "yank_functions.h"
 
@@ -412,7 +414,11 @@ static void multifd_send_terminate_threads(Error *err)
 
 static int multifd_send_channel_destroy(QIOChannel *send)
 {
-    return socket_send_channel_destroy(send);
+    if (!multifd_use_packets()) {
+        return file_send_channel_destroy(send);
+    } else {
+        return socket_send_channel_destroy(send);
+    }
 }
 
 void multifd_save_cleanup(void)
@@ -661,10 +667,6 @@ out:
     return NULL;
 }
 
-static bool multifd_channel_connect(MultiFDSendParams *p,
-                                    QIOChannel *ioc,
-                                    Error **errp);
-
 static void multifd_tls_outgoing_handshake(QIOTask *task,
                                            gpointer opaque)
 {
@@ -728,9 +730,8 @@ static bool multifd_tls_channel_connect(MultiFDSendParams *p,
     return true;
 }
 
-static bool multifd_channel_connect(MultiFDSendParams *p,
-                                    QIOChannel *ioc,
-                                    Error **errp)
+bool multifd_channel_connect(MultiFDSendParams *p, QIOChannel *ioc,
+                             Error **errp)
 {
     trace_multifd_set_outgoing_channel(
         ioc, object_get_typename(OBJECT(ioc)),
@@ -789,9 +790,14 @@ static void multifd_new_send_channel_async(QIOTask *task, gpointer opaque)
     multifd_new_send_channel_cleanup(p, ioc, local_err);
 }
 
-static void multifd_new_send_channel_create(gpointer opaque)
+static bool multifd_new_send_channel_create(gpointer opaque, Error **errp)
 {
+    if (!multifd_use_packets()) {
+        return file_send_channel_create(opaque, errp);
+    }
+
     socket_send_channel_create(multifd_new_send_channel_async, opaque);
+    return true;
 }
 
 int multifd_save_setup(Error **errp)
@@ -842,7 +848,9 @@ int multifd_save_setup(Error **errp)
         p->page_count = page_count;
         p->write_flags = 0;
 
-        multifd_new_send_channel_create(p);
+        if (!multifd_new_send_channel_create(p, errp)) {
+            return -1;
+        }
     }
 
     for (i = 0; i < thread_count; i++) {

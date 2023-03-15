@@ -208,5 +208,7 @@ typedef struct {
 extern MultiFDMethods multifd_socket_ops;
 
 void multifd_register_compression(int method, MultiFDMethods *ops);
+bool multifd_channel_connect(MultiFDSendParams *p, QIOChannel *ioc,
+                             Error **errp);
 
 #endif
