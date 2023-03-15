@@ -463,6 +463,19 @@ ssize_t qio_channel_pwritev_full(QIOChannel *ioc, const struct iovec *iov,
     return klass->io_pwritev(ioc, iov, niov, offset, errp);
 }
 
+/*
+int qio_channel_pwritev_full_all(QIOChannel *ioc,
+                                 const struct iovec *iov,
+                                 size_t niov,
+                                 off_t offset, Error **errp)
+{
+    ssize_t len;
+
+    len = qio_channel_pwritev_full(ioc, iov, niov, offset, errp);
+    return (len < 0) ? -1 : 0;
+}
+*/
+
 ssize_t qio_channel_pwritev(QIOChannel *ioc, char *buf, size_t buflen,
                             off_t offset, Error **errp)
 {
