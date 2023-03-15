@@ -4,16 +4,56 @@
 #include "file.h"
 #include "qemu/error-report.h"
 
+static struct FileOutgoingArgs {
+    const char *fname;
+    int flags;
+    int mode;
+} outgoing_args;
 
-void file_start_outgoing_migration(MigrationState *s, const char *fname, Error **errp)
+static void qio_channel_file_connect_worker(QIOTask *task, gpointer opaque)
+{
+    /* noop */
+}
+
+void file_send_channel_create(QIOTaskFunc f, void *data)
 {
     QIOChannelFile *ioc;
+    QIOTask *task;
+    Error *errp = NULL;
 
-    ioc = qio_channel_file_new_path(fname, O_CREAT|O_TRUNC|O_WRONLY, 0660, errp);
+    ioc = qio_channel_file_new_path(outgoing_args.fname,
+                                    outgoing_args.flags,
+                                    outgoing_args.mode, &errp);
     if (!ioc) {
         error_report("Error creating a channel");
         return;
     }
+
+    task = qio_task_new(OBJECT(ioc), f, (gpointer)data, NULL);
+
+    /*
+     * XXX: Could I just call task->func here instead? There's nothing
+     * to be done in the worker.
+     */
+    qio_task_run_in_thread(task, qio_channel_file_connect_worker,
+                           (gpointer)data, NULL, NULL);
+}
+
+void file_start_outgoing_migration(MigrationState *s, const char *fname, Error **errp)
+{
+    QIOChannelFile *ioc;
+    int flags = O_CREAT | O_TRUNC | O_WRONLY;
+    mode_t mode = 0660;
+
+    ioc = qio_channel_file_new_path(fname, flags, mode, errp);
+    if (!ioc) {
+        error_report("Error creating a channel");
+        return;
+    }
+
+    outgoing_args.fname = fname;
+    outgoing_args.flags = flags;
+    outgoing_args.mode = mode;
 
     qio_channel_set_name(QIO_CHANNEL(ioc), "migration-file-outgoing");
     migration_channel_connect(s, QIO_CHANNEL(ioc), NULL, NULL);
