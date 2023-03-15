@@ -66,6 +66,7 @@ struct QEMUFile {
     Error *last_error_obj;
     /* has the file has been shutdown */
     bool shutdown;
+    off_t offset;
 };
 
 /*
@@ -304,9 +305,20 @@ void qemu_fflush(QEMUFile *f)
     }
     if (f->iovcnt > 0) {
         Error *local_error = NULL;
-        if (qio_channel_writev_all(f->ioc,
-                                   f->iov, f->iovcnt,
-                                   &local_error) < 0) {
+        int r;
+
+        if (f->offset) {
+            r = qio_channel_io_pwritev_full(f->ioc,
+                                            f->iov, f->iovcnt,
+                                            f->offset,
+                                            &local_error);
+        } else {
+            r = qio_channel_writev_all(f->ioc,
+                                       f->iov, f->iovcnt,
+                                       &local_error);
+        }
+
+        if (r < 0) {
             qemu_file_set_error_obj(f, -EIO, local_error);
         } else {
             f->total_transferred += iov_size(f->iov, f->iovcnt);
@@ -317,6 +329,7 @@ void qemu_fflush(QEMUFile *f)
 
     f->buf_index = 0;
     f->iovcnt = 0;
+    f->offset = 0;
 }
 
 void ram_control_before_iterate(QEMUFile *f, uint64_t flags)
@@ -566,22 +579,38 @@ void qemu_put_buffer(QEMUFile *f, const uint8_t *buf, size_t size)
 
 void qemu_put_buffer_at(QEMUFile *f, const uint8_t *buf, size_t buflen, off_t pos)
 {
-    Error *err = NULL;
+    size_t iov_total_len = 0;
+    int i;
 
     if (f->last_error) {
         return;
     }
 
-    qemu_fflush(f);
-    qio_channel_io_pwritev(f->ioc, (char *)buf, buflen, pos, &err);
-
-    if (err) {
-        qemu_file_set_error_obj(f, -EIO, err);
+    if (!f->offset) {
+        /*
+         * Flush to start a new sequence of iovs, all of which will be
+         * written sequentially to the offset.
+         */
+        qemu_fflush(f);
+        f->offset = pos;
     } else {
-        f->total_transferred += buflen;
+        /*
+         * We write page-sized iovs starting at a page-aligned offset,
+         * so we can't have gaps. We'll need a flush every time we
+         * skip zero pages.
+         */
+
+        for (i = 0; i < f->iovcnt; i++) {
+            iov_total_len += f->iov[i].iov_len;
+        }
+
+        if (pos != f->offset + iov_total_len) {
+            qemu_fflush(f);
+            f->offset = pos;
+        }
     }
 
-    return;
+    add_to_iovec(f, buf, buflen, false);
 }
 
 
@@ -816,7 +845,6 @@ int64_t qemu_file_total_transferred_fast(QEMUFile *f)
 
 int64_t qemu_file_total_transferred(QEMUFile *f)
 {
-    qemu_fflush(f);
     return f->total_transferred;
 }
 
