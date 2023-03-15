@@ -88,7 +88,6 @@ static void qio_channel_file_finalize(Object *obj)
     }
 }
 
-
 static ssize_t qio_channel_file_readv(QIOChannel *ioc,
                                       const struct iovec *iov,
                                       size_t niov,
