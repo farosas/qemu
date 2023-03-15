@@ -4,6 +4,35 @@
 #include "file.h"
 #include "qemu/error-report.h"
 
+static struct FileOutgoingArgs {
+    int fd;
+} outgoing_args;
+
+static void qio_channel_file_connect_worker(QIOTask *task, gpointer opaque)
+{
+    /* noop */
+}
+
+void file_send_channel_create(QIOTaskFunc f, void *data)
+{
+    QIOChannelFile *ioc;
+    QIOTask *task;
+
+    ioc = qio_channel_file_new_fd(outgoing_args.fd);
+    if (!ioc) {
+        error_report("Error creating a channel");
+        return;
+    }
+
+    task = qio_task_new(OBJECT(ioc), f, (gpointer)data, NULL);
+
+    /*
+     * XXX: Could I just call task->func here instead? There's nothing
+     * to be done in the worker.
+     */
+    qio_task_run_in_thread(task, qio_channel_file_connect_worker,
+                           (gpointer)data, NULL, NULL);
+}
 
 void file_start_outgoing_migration(MigrationState *s, const char *fname, Error **errp)
 {
@@ -15,6 +44,7 @@ void file_start_outgoing_migration(MigrationState *s, const char *fname, Error *
         return;
     }
 
+    outgoing_args.fd = ioc->fd;
     qio_channel_set_name(QIO_CHANNEL(ioc), "migration-file-outgoing");
     migration_channel_connect(s, QIO_CHANNEL(ioc), NULL, NULL);
     object_unref(OBJECT(ioc));
