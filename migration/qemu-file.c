@@ -573,7 +573,7 @@ void qemu_put_buffer_at(QEMUFile *f, const uint8_t *buf, size_t buflen, off_t po
     }
 
     qemu_fflush(f);
-    qio_channel_io_pwritev(f->ioc, (char *)buf, buflen, pos, &err);
+    qio_channel_pwritev(f->ioc, (char *)buf, buflen, pos, &err);
 
     if (err) {
         qemu_file_set_error_obj(f, -EIO, err);
@@ -594,7 +594,7 @@ size_t qemu_get_buffer_at(QEMUFile *f, const uint8_t *buf, size_t buflen, off_t 
         return 0;
     }
 
-    ret = qio_channel_io_preadv(f->ioc, (char *)buf, buflen, pos, &err);
+    ret = qio_channel_preadv(f->ioc, (char *)buf, buflen, pos, &err);
     if (ret == -1 || err) {
         goto error;
     }

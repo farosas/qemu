@@ -33,6 +33,7 @@ OBJECT_DECLARE_TYPE(QIOChannel, QIOChannelClass,
 #define QIO_CHANNEL_ERR_BLOCK -2
 
 #define QIO_CHANNEL_WRITE_FLAG_ZERO_COPY 0x1
+#define QIO_CHANNEL_WRITE_FLAG_OFFSET 0x2
 
 #define QIO_CHANNEL_READ_FLAG_MSG_PEEK 0x1
 
@@ -522,7 +523,7 @@ int qio_channel_close(QIOChannel *ioc,
                       Error **errp);
 
 /**
- * qio_channel_io_pwritev_full
+ * qio_channel_pwritev_full
  * @ioc: the channel object
  * @iov: the array of memory regions to write data from
  * @niov: the length of the @iov array
@@ -538,11 +539,19 @@ int qio_channel_close(QIOChannel *ioc,
  * passed @offset
  *
  */
-ssize_t qio_channel_io_pwritev_full(QIOChannel *ioc, const struct iovec *iov,
-                                    size_t niov, off_t offset, Error **errp);
+ssize_t qio_channel_pwritev_full(QIOChannel *ioc, const struct iovec *iov,
+                                 size_t niov, off_t offset, Error **errp);
+
+int qio_channel_pwritev_full_all(QIOChannel *ioc, const struct iovec *iov,
+                                 size_t niov, off_t offset, Error **errp);
+
+int qio_channel_write_full_all(QIOChannel *ioc, const struct iovec *iov,
+                               size_t niov, off_t offset, int *fds, size_t nfds,
+                               int flags, Error **errp);
+
 
 /**
- * qio_channel_io_pwritev
+ * qio_channel_pwritev
  * @ioc: the channel object
  * @buf: the memory region to write data into
  * @buflen: the number of bytes to @buf
@@ -554,11 +563,11 @@ ssize_t qio_channel_io_pwritev_full(QIOChannel *ioc, const struct iovec *iov,
  * flag QIO_CHANNEL_FEATURE_SEEKABLE prior to calling this method.
  *
  */
-ssize_t qio_channel_io_pwritev(QIOChannel *ioc, char *buf, size_t buflen,
-                               off_t offset, Error **errp);
+ssize_t qio_channel_pwritev(QIOChannel *ioc, char *buf, size_t buflen,
+                            off_t offset, Error **errp);
 
 /**
- * qio_channel_io_preadv
+ * qio_channel_preadv
  * @ioc: the channel object
  * @iov: the array of memory regions to read data into
  * @niov: the length of the @iov array
@@ -574,11 +583,11 @@ ssize_t qio_channel_io_pwritev(QIOChannel *ioc, char *buf, size_t buflen,
  * passed @offset
  *
  */
-ssize_t qio_channel_io_preadv_full(QIOChannel *ioc, const struct iovec *iov,
-                                   size_t niov, off_t offset, Error **errp);
+ssize_t qio_channel_preadv_full(QIOChannel *ioc, const struct iovec *iov,
+                                size_t niov, off_t offset, Error **errp);
 
 /**
- * qio_channel_io_preadv
+ * qio_channel_preadv
  * @ioc: the channel object
  * @buf: the memory region to write data into
  * @buflen: the number of bytes to @buf
@@ -590,8 +599,8 @@ ssize_t qio_channel_io_preadv_full(QIOChannel *ioc, const struct iovec *iov,
  * flag QIO_CHANNEL_FEATURE_SEEKABLE prior to calling this method.
  *
  */
-ssize_t qio_channel_io_preadv(QIOChannel *ioc, char *buf, size_t buflen,
-                              off_t offset, Error **errp);
+ssize_t qio_channel_preadv(QIOChannel *ioc, char *buf, size_t buflen,
+                           off_t offset, Error **errp);
 
 /**
  * qio_channel_shutdown:
