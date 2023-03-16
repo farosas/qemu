@@ -33,6 +33,7 @@ OBJECT_DECLARE_TYPE(QIOChannel, QIOChannelClass,
 #define QIO_CHANNEL_ERR_BLOCK -2
 
 #define QIO_CHANNEL_WRITE_FLAG_ZERO_COPY 0x1
+#define QIO_CHANNEL_WRITE_FLAG_OFFSET 0x2
 
 #define QIO_CHANNEL_READ_FLAG_MSG_PEEK 0x1
 
@@ -540,6 +541,13 @@ int qio_channel_close(QIOChannel *ioc,
  */
 ssize_t qio_channel_pwritev_full(QIOChannel *ioc, const struct iovec *iov,
                                  size_t niov, off_t offset, Error **errp);
+
+int qio_channel_pwritev_full_all(QIOChannel *ioc, const struct iovec *iov,
+                                 size_t niov, off_t offset, Error **errp);
+
+int qio_channel_write_full_all(QIOChannel *ioc, const struct iovec *iov,
+                               size_t niov, off_t offset, int *fds, size_t nfds,
+                               int flags, Error **errp);
 
 /**
  * qio_channel_pwritev

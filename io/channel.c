@@ -463,18 +463,68 @@ ssize_t qio_channel_pwritev_full(QIOChannel *ioc, const struct iovec *iov,
     return klass->io_pwritev(ioc, iov, niov, offset, errp);
 }
 
-/*
 int qio_channel_pwritev_full_all(QIOChannel *ioc,
                                  const struct iovec *iov,
                                  size_t niov,
                                  off_t offset, Error **errp)
 {
-    ssize_t len;
+    ssize_t ret;
+    int i, to_send_idx, to_send_num;
+    uint64_t base, next, file_offset;
+    size_t len;
 
-    len = qio_channel_pwritev_full(ioc, iov, niov, offset, errp);
-    return (len < 0) ? -1 : 0;
+    to_send_idx = 0;
+    to_send_num = 1;
+
+    /*
+     * If the iov doesn't have contiguous elements, we need to split
+     * it in segments becasue we only have one (file) 'offset' for the
+     * whole iov. Do this here so callers don't need to break the iov
+     * array themselves.
+     */
+    for (i = 0; i < niov; i++, to_send_num++) {
+        base = (uint64_t) iov[i].iov_base;
+
+        if (i != niov - 1) {
+            len = iov[i].iov_len;
+            next = (uint64_t) iov[i + 1].iov_base;
+
+            if (base + len == next) {
+                continue;
+            }
+        }
+
+        /*
+         * Use the offset of the first element of the segment that
+         * we're sending.
+         */
+        file_offset = offset + (uint64_t) iov[to_send_idx].iov_base;
+
+        ret = qio_channel_pwritev_full(ioc, &iov[to_send_idx], to_send_num,
+                                       file_offset, errp);
+        if (ret < 0) {
+            break;
+        }
+
+        to_send_idx += to_send_num;
+        to_send_num = 0;
+    }
+
+    return (ret < 0) ? -1 : 0;
 }
-*/
+
+int qio_channel_write_full_all(QIOChannel *ioc,
+                                const struct iovec *iov,
+                                size_t niov, off_t offset,
+                                int *fds, size_t nfds,
+                                int flags, Error **errp)
+{
+    if (flags & QIO_CHANNEL_WRITE_FLAG_OFFSET) {
+        return qio_channel_pwritev_full_all(ioc, iov, niov, offset, errp);
+    }
+
+    return qio_channel_writev_full_all(ioc, iov, niov, NULL, 0, flags, errp);
+}
 
 ssize_t qio_channel_pwritev(QIOChannel *ioc, char *buf, size_t buflen,
                             off_t offset, Error **errp)
@@ -506,7 +556,7 @@ ssize_t qio_channel_preadv_full(QIOChannel *ioc, const struct iovec *iov,
 }
 
 ssize_t qio_channel_preadv(QIOChannel *ioc, char *buf, size_t buflen,
-                              off_t offset, Error **errp)
+                           off_t offset, Error **errp)
 {
     struct iovec iov = {
         .iov_base = buf,

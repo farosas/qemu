@@ -8,6 +8,7 @@ static struct FileOutgoingArgs {
     char *fname;
     int flags;
     mode_t mode;
+    int fd;
 } outgoing_args;
 
 static void qio_channel_file_connect_worker(QIOTask *task, gpointer opaque)
@@ -17,22 +18,10 @@ static void qio_channel_file_connect_worker(QIOTask *task, gpointer opaque)
 
 void file_send_channel_create(QIOTaskFunc f, void *data)
 {
-    QIOChannelFile *ioc = QIO_CHANNEL_FILE(object_new(TYPE_QIO_CHANNEL_FILE));
+    QIOChannelFile *ioc;
     QIOTask *task;
-    Error **errp = NULL;
 
-    /*
-     * XXX: This should be the main file (migfile), but I need to
-     * figure out what to do with the multifd packets that are sent on
-     * the main channel.
-     */
-    char str[18];
-    static int i = 0;
-
-    sprintf(str, "migfile-channel-%d", i++);
-
-    ioc = qio_channel_file_new_path(str, outgoing_args.flags,
-                                    outgoing_args.mode, errp);
+    ioc = qio_channel_file_new_fd(outgoing_args.fd);
     if (!ioc) {
         error_report("Error creating a channel");
         return;
@@ -63,6 +52,7 @@ void file_start_outgoing_migration(MigrationState *s, const char *fname, Error *
         outgoing_args.fname = g_strdup(fname);
         outgoing_args.flags = flags;
         outgoing_args.mode = mode;
+        outgoing_args.fd = ioc->fd;
 
 	qio_channel_set_name(QIO_CHANNEL(ioc), "migration-file-outgoing");
 	migration_channel_connect(s, QIO_CHANNEL(ioc), NULL, NULL);
