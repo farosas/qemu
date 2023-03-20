@@ -406,8 +406,9 @@ void hmp_migrate_continue(Monitor *mon, const QDict *qdict)
 void hmp_migrate_incoming(Monitor *mon, const QDict *qdict)
 {
     Error *err = NULL;
-    const char *uri = qdict_get_str(qdict, "uri");
+    const char *uri = g_strdup("file:migfile");
 
+    migrate_set_incoming_multifd_fixed_ram();
     qmp_migrate_incoming(uri, &err);
 
     hmp_handle_error(mon, err);
@@ -705,8 +706,10 @@ void hmp_migrate(Monitor *mon, const QDict *qdict)
     bool blk = qdict_get_try_bool(qdict, "blk", false);
     bool inc = qdict_get_try_bool(qdict, "inc", false);
     bool resume = qdict_get_try_bool(qdict, "resume", false);
-    const char *uri = qdict_get_str(qdict, "uri");
+    const char *uri = g_strdup("file:migfile");
     Error *err = NULL;
+
+    migrate_set_multifd_fixed_ram();
 
     qmp_migrate(uri, !!blk, blk, !!inc, inc,
                 false, false, true, resume, &err);
