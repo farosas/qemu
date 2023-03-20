@@ -1501,6 +1501,30 @@ MigrationInfo *qmp_query_migrate(Error **errp)
     return info;
 }
 
+void qmp_migrate_set_multifd_fixed_ram(void)
+{
+    MigrationState *s = migrate_get_current();
+    int channels = 8;
+
+    warn_report("migrating with multifd(%d) + fixed_ram", channels);
+    vm_stop_force_state(RUN_STATE_PAUSED);
+
+    s->enabled_capabilities[MIGRATION_CAPABILITY_MULTIFD] = true;
+    s->enabled_capabilities[MIGRATION_CAPABILITY_FIXED_RAM] = true;
+    s->parameters.multifd_channels = channels;
+    s->parameters.max_bandwidth = 0;
+}
+
+void qmp_migrate_set_incoming_multifd_fixed_ram(void)
+{
+    MigrationState *s = migrate_get_current();
+
+    warn_report("migrating incoming fixed_ram");
+
+    s->enabled_capabilities[MIGRATION_CAPABILITY_FIXED_RAM] = true;
+    s->parameters.max_bandwidth = 0;
+}
+
 void qmp_migrate_set_capabilities(MigrationCapabilityStatusList *params,
                                   Error **errp)
 {
