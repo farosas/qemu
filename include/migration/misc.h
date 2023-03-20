@@ -77,4 +77,7 @@ bool migration_in_bg_snapshot(void);
 /* migration/block-dirty-bitmap.c */
 void dirty_bitmap_mig_init(void);
 
+void migrate_set_multifd_fixed_ram(void);
+void migrate_set_incoming_multifd_fixed_ram(void);
+
 #endif
