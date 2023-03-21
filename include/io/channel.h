@@ -33,6 +33,7 @@ OBJECT_DECLARE_TYPE(QIOChannel, QIOChannelClass,
 #define QIO_CHANNEL_ERR_BLOCK -2
 
 #define QIO_CHANNEL_WRITE_FLAG_ZERO_COPY 0x1
+#define QIO_CHANNEL_WRITE_FLAG_OFFSET 0x2
 
 #define QIO_CHANNEL_READ_FLAG_MSG_PEEK 0x1
 
@@ -540,6 +541,58 @@ int qio_channel_close(QIOChannel *ioc,
  */
 ssize_t qio_channel_pwritev_full(QIOChannel *ioc, const struct iovec *iov,
                                  size_t niov, off_t offset, Error **errp);
+
+
+/**
+ * qio_channel_pwritev_full_all:
+ * @ioc: the channel object
+ * @iov: the array of memory regions to write data from
+ * @niov: the length of the @iov array
+ * @offset: the iovec offset minus the host page
+ * @errp: pointer to a NULL-initialized error object
+ *
+ * Write data from a host page to the IO channel at an offset, reading
+ * it from the memory regions referenced by @iov. Each element in the
+ * @iov will be fully sent, before the next one is used. The @niov
+ * parameter specifies the total number of elements in @iov.
+ *
+ * If @iov contains buffers that are not contiguous, it is left
+ * unchanged and elements are grouped and written in contiguous
+ * segments. The @iov elements are all expected to contain data from
+ * the same host page.
+ *
+ * Not all implementations will support this facility, so may report
+ * an error. To avoid errors, the caller may check for the feature
+ * flag QIO_CHANNEL_FEATURE_SEEKABLE prior to calling this method.
+ *
+ * Returns: 0 if all bytes were written, or -1 on error
+ */
+int qio_channel_pwritev_full_all(QIOChannel *ioc, const struct iovec *iov,
+                                 size_t niov, off_t offset, Error **errp);
+
+/**
+ * qio_channel_write_full_all:
+ * @ioc: the channel object
+ * @iov: the array of memory regions to write data from
+ * @niov: the length of the @iov array
+ * @offset: the iovec offset in the file (for file-base migration)
+ * @fds: an array of file handles to send
+ * @nfds: number of file handles in @fds
+ * @flags: write flags (QIO_CHANNEL_WRITE_FLAG_*)
+ * @errp: pointer to a NULL-initialized error object
+ *
+ *
+ * Selects between a writev or pwritev channel writer function.
+ *
+ * If QIO_CHANNEL_WRITE_FLAG_OFFSET is passed in flags, pwritev is
+ * used and @offset is expected to be a meaningful value, @fds and
+ * @nfds are ignored; otherwise uses writev and @offset is ignored.
+ *
+ * Returns: 0 if all bytes were written, or -1 on error
+ */
+int qio_channel_write_full_all(QIOChannel *ioc, const struct iovec *iov,
+                               size_t niov, off_t offset, int *fds, size_t nfds,
+                               int flags, Error **errp);
 
 /**
  * qio_channel_pwritev
