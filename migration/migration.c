@@ -2773,6 +2773,11 @@ int migrate_fixed_ram(void)
     return migrate_get_current()->enabled_capabilities[MIGRATION_CAPABILITY_FIXED_RAM];
 }
 
+int migrate_multifd_over_file(void)
+{
+    return migrate_fixed_ram();
+}
+
 int migrate_multifd_zlib_level(void)
 {
     MigrationState *s;

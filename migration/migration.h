@@ -421,6 +421,7 @@ bool migrate_dirty_bitmaps(void);
 bool migrate_ignore_shared(void);
 bool migrate_validate_uuid(void);
 int migrate_fixed_ram(void);
+int migrate_multifd_over_file(void);
 
 bool migrate_auto_converge(void);
 bool migrate_use_multifd(void);
