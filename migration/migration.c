@@ -794,6 +794,8 @@ void migration_ioc_process_incoming(QIOChannel *ioc, Error **errp)
         }
 
         default_channel = (channel_magic == cpu_to_be32(QEMU_VM_FILE_MAGIC));
+    } else if (migrate_use_multifd() && migrate_fixed_ram()) {
+        default_channel = false;
     } else {
         default_channel = !mis->from_src_file;
     }
@@ -1504,7 +1506,7 @@ MigrationInfo *qmp_query_migrate(Error **errp)
 void qmp_migrate_set_multifd_fixed_ram(void)
 {
     MigrationState *s = migrate_get_current();
-    int channels = 8;
+    int channels = 1;
 
     warn_report("migrating with multifd(%d) + fixed_ram", channels);
     vm_stop_force_state(RUN_STATE_PAUSED);
@@ -1522,6 +1524,8 @@ void qmp_migrate_set_incoming_multifd_fixed_ram(void)
     warn_report("migrating incoming fixed_ram");
 
     s->enabled_capabilities[MIGRATION_CAPABILITY_FIXED_RAM] = true;
+    s->enabled_capabilities[MIGRATION_CAPABILITY_MULTIFD] = true;
+    s->parameters.multifd_channels = 1;
     s->parameters.max_bandwidth = 0;
 }
 
