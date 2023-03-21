@@ -150,6 +150,53 @@ void file_start_incoming_migration(FileMigrationArgs *file_args, Error **errp)
     }
 }
 
+int file_write_ramblock_iov(QIOChannel *ioc, const struct iovec *iov,
+                            int niov, RAMBlock *block, Error **errp)
+{
+    ssize_t ret = -1;
+    int i, slice_idx, slice_num;
+    uintptr_t base, next, offset;
+    size_t len;
+
+    slice_idx = 0;
+    slice_num = 1;
+
+    /*
+     * If the iov array doesn't have contiguous elements, we need to
+     * split it in slices because we only have one file offset for the
+     * whole iov. Do this here so callers don't need to break the iov
+     * array themselves.
+     */
+    for (i = 0; i < niov; i++, slice_num++) {
+        base = (uintptr_t) iov[i].iov_base;
+
+        if (i != niov - 1) {
+            len = iov[i].iov_len;
+            next = (uintptr_t) iov[i + 1].iov_base;
+
+            if (base + len == next) {
+                continue;
+            }
+        }
+
+        /*
+         * Use the offset of the first element of the segment that
+         * we're sending.
+         */
+        offset = (uintptr_t) iov[slice_idx].iov_base - (uintptr_t) block->host;
+        ret = qio_channel_pwritev(ioc, &iov[slice_idx], slice_num,
+                                  block->pages_offset + offset, errp);
+        if (ret < 0) {
+            break;
+        }
+
+        slice_idx += slice_num;
+        slice_num = 0;
+    }
+
+    return (ret < 0) ? -1 : 0;
+}
+
 static int multifd_file_send_setup(MultiFDSendParams *p, Error **errp)
 {
     return 0;
@@ -162,12 +209,29 @@ static void multifd_file_send_cleanup(MultiFDSendParams *p, Error **errp)
 
 static int multifd_file_send_prepare(MultiFDSendParams *p, Error **errp)
 {
+    MultiFDPages_t *pages = p->pages;
+
+    for (int i = 0; i < p->normal_num; i++) {
+        p->iov[p->iovs_num].iov_base = pages->block->host + p->normal[i];
+        p->iov[p->iovs_num].iov_len = p->page_size;
+        p->iovs_num++;
+    }
+
+    p->next_packet_size = p->normal_num * p->page_size;
+    p->flags |= MULTIFD_FLAG_NOCOMP;
+
     return 0;
 }
 
 static int multifd_file_send(MultiFDSendParams *p, Error **errp)
 {
     return 0;
+}
+
+static int multifd_file_send(MultiFDSendParams *p, Error **errp)
+{
+    return file_write_ramblock_iov(p->c, p->iov, p->iovs_num, p->pages->block,
+                                   errp);
 }
 
 static int multifd_file_recv_setup(MultiFDRecvParams *p, Error **errp)

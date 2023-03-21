@@ -161,6 +161,17 @@ static void multifd_pages_clear(MultiFDPages_t *pages)
     g_free(pages);
 }
 
+static void multifd_set_file_bitmap(MultiFDSendParams *p)
+{
+    MultiFDPages_t *pages = p->pages;
+
+    assert(pages->block);
+
+    for (int i = 0; i < p->normal_num; i++) {
+        ramblock_set_file_bmap_atomic(pages->block, pages->offset[i]);
+    }
+}
+
 static void multifd_send_fill_packet(MultiFDSendParams *p)
 {
     MultiFDPacket_t *packet = p->packet;
@@ -500,7 +511,7 @@ int multifd_send_sync_main(void)
     int i;
     bool flush_zero_copy;
 
-    if (!migrate_multifd() || !multifd_use_packets()) {
+    if (!migrate_multifd()) {
         return 0;
     }
     if (multifd_send_state->pages->num) {
@@ -508,6 +519,34 @@ int multifd_send_sync_main(void)
             error_report("%s: multifd_send_pages fail", __func__);
             return -1;
         }
+    }
+
+    if (!multifd_use_packets()) {
+        /*
+         * There's no sync packet to send. Just make sure the sending
+         * above has finished.
+         */
+        for (i = 0; i < migrate_multifd_channels(); i++) {
+            qemu_sem_wait(&multifd_send_state->channels_ready);
+        }
+
+        /* sanity check and release the channels */
+        for (i = 0; i < migrate_multifd_channels(); i++) {
+            MultiFDSendParams *p = &multifd_send_state->params[i];
+
+            qemu_mutex_lock(&p->mutex);
+            if (p->quit) {
+                error_report("%s: channel %d has already quit!", __func__, i);
+                qemu_mutex_unlock(&p->mutex);
+                return -1;
+            }
+            assert(!p->pending_job);
+            qemu_mutex_unlock(&p->mutex);
+
+            qemu_sem_post(&p->sem);
+        }
+
+        return 0;
     }
 
     /*
@@ -617,13 +656,14 @@ static void *multifd_send_thread(void *opaque)
             if (use_packets) {
                 multifd_send_fill_packet(p);
                 p->num_packets++;
+            } else {
+                multifd_set_file_bitmap(p);
             }
 
             flags = p->flags;
             p->flags = 0;
             p->total_normal_pages += p->normal_num;
             p->pages->num = 0;
-            p->pages->block = NULL;
             qemu_mutex_unlock(&p->mutex);
 
             trace_multifd_send(p->id, p->packet_num, p->normal_num, flags,
@@ -638,6 +678,7 @@ static void *multifd_send_thread(void *opaque)
                        p->next_packet_size + p->packet_len);
             p->next_packet_size = 0;
             qemu_mutex_lock(&p->mutex);
+            p->pages->block = NULL;
             p->pending_job--;
             qemu_mutex_unlock(&p->mutex);
 
