@@ -867,6 +867,7 @@ int multifd_save_setup(Error **errp)
 
 struct {
     MultiFDRecvParams *params;
+    MultiFDRecvData *data;
     /* number of created threads */
     int count;
     /* syncs main thread and channels */
@@ -876,6 +877,49 @@ struct {
     /* multifd ops */
     MultiFDMethods *ops;
 } *multifd_recv_state;
+
+int multifd_recv(void)
+{
+    int i;
+    static int next_recv_channel;
+    MultiFDRecvParams *p = NULL;
+    MultiFDRecvData *data = multifd_recv_state->data;
+
+    /*
+     * next_channel can remain from a previous migration that was
+     * using more channels, so ensure it doesn't overflow if the
+     * limit is lower now.
+     */
+    next_recv_channel %= migrate_multifd_channels();
+    for (i = next_recv_channel;; i = (i + 1) % migrate_multifd_channels()) {
+        p = &multifd_recv_state->params[i];
+
+        qemu_mutex_lock(&p->mutex);
+        if (p->quit) {
+            error_report("%s: channel %d has already quit!", __func__, i);
+            qemu_mutex_unlock(&p->mutex);
+            return -1;
+        }
+        if (!p->pending_job) {
+            p->pending_job++;
+            next_recv_channel = (i + 1) % migrate_multifd_channels();
+            break;
+        }
+        qemu_mutex_unlock(&p->mutex);
+    }
+    assert(p->data->size == 0);
+    multifd_recv_state->data = p->data;
+    p->data = data;
+    qemu_mutex_unlock(&p->mutex);
+    qemu_sem_post(&p->sem);
+
+    return 1;
+}
+
+MultiFDRecvData *multifd_get_recv_data(void)
+{
+    return multifd_recv_state->data;
+}
 
 static void multifd_recv_terminate_threads(Error *err)
 {
@@ -898,6 +942,7 @@ static void multifd_recv_terminate_threads(Error *err)
 
         qemu_mutex_lock(&p->mutex);
         p->quit = true;
+        qemu_sem_post(&p->sem);
         /*
          * We could arrive here for two reasons:
          *  - normal quit, i.e. everything went fine, just finished
@@ -947,6 +992,7 @@ void multifd_load_cleanup(void)
         p->c = NULL;
         qemu_mutex_destroy(&p->mutex);
         qemu_sem_destroy(&p->sem_sync);
+        qemu_sem_destroy(&p->sem);
         g_free(p->name);
         p->name = NULL;
         p->packet_len = 0;
@@ -961,6 +1007,8 @@ void multifd_load_cleanup(void)
     qemu_sem_destroy(&multifd_recv_state->sem_sync);
     g_free(multifd_recv_state->params);
     multifd_recv_state->params = NULL;
+    g_free(multifd_recv_state->data);
+    multifd_recv_state->data = NULL;
     g_free(multifd_recv_state);
     multifd_recv_state = NULL;
 }
@@ -969,9 +1017,24 @@ void multifd_recv_sync_main(void)
 {
     int i;
 
-    if (!migrate_multifd() || !multifd_use_packets()) {
+    if (!migrate_multifd()) {
         return;
     }
+
+    if (!multifd_use_packets()) {
+        for (i = 0; i < migrate_multifd_channels(); i++) {
+            MultiFDRecvParams *p = &multifd_recv_state->params[i];
+
+            qemu_sem_post(&p->sem);
+            qemu_sem_wait(&p->sem_sync);
+
+            qemu_mutex_lock(&p->mutex);
+            assert(!p->pending_job || p->quit);
+            qemu_mutex_unlock(&p->mutex);
+        }
+        return;
+    }
+
     for (i = 0; i < migrate_multifd_channels(); i++) {
         MultiFDRecvParams *p = &multifd_recv_state->params[i];
 
@@ -1034,6 +1097,18 @@ static void *multifd_recv_thread(void *opaque)
 
             p->total_normal_pages += p->normal_num;
             has_data = !!p->normal_num;
+        } else {
+            /*
+             * No packets, so we need to wait for the vmstate code to
+             * give us work.
+             */
+            qemu_sem_wait(&p->sem);
+            qemu_mutex_lock(&p->mutex);
+            if (!p->pending_job) {
+                qemu_mutex_unlock(&p->mutex);
+                break;
+            }
+            has_data = !!p->data->size;
         }
 
         qemu_mutex_unlock(&p->mutex);
@@ -1049,6 +1124,17 @@ static void *multifd_recv_thread(void *opaque)
             qemu_sem_post(&multifd_recv_state->sem_sync);
             qemu_sem_wait(&p->sem_sync);
         }
+
+        if (!use_packets) {
+            qemu_mutex_lock(&p->mutex);
+            p->data->size = 0;
+            p->pending_job--;
+            qemu_mutex_unlock(&p->mutex);
+        }
+    }
+
+    if (!use_packets) {
+        qemu_sem_post(&p->sem_sync);
     }
 
     if (local_err) {
@@ -1083,6 +1169,10 @@ int multifd_load_setup(Error **errp)
     thread_count = migrate_multifd_channels();
     multifd_recv_state = g_malloc0(sizeof(*multifd_recv_state));
     multifd_recv_state->params = g_new0(MultiFDRecvParams, thread_count);
+
+    multifd_recv_state->data = g_new0(MultiFDRecvData, 1);
+    multifd_recv_state->data->size = 0;
+
     qatomic_set(&multifd_recv_state->count, 0);
     qemu_sem_init(&multifd_recv_state->sem_sync, 0);
     multifd_recv_state->ops = multifd_get_ops();
@@ -1092,8 +1182,13 @@ int multifd_load_setup(Error **errp)
 
         qemu_mutex_init(&p->mutex);
         qemu_sem_init(&p->sem_sync, 0);
+        qemu_sem_init(&p->sem, 0);
         p->quit = false;
+        p->pending_job = 0;
         p->id = i;
+
+        p->data = g_new0(MultiFDRecvData, 1);
+        p->data->size = 0;
 
         if (use_packets) {
             p->packet_len = sizeof(MultiFDPacket_t)
