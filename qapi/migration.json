@@ -780,6 +780,9 @@
 #                        block device name if there is one, and to their node name
 #                        otherwise. (Since 5.2)
 #
+# @direct-io: Open migration files with O_DIRECT when possible. Not
+#             all migration transports support this. (since 8.1)
+#
 # Features:
 # @unstable: Member @x-checkpoint-delay is experimental.
 #
@@ -800,7 +803,7 @@
            'xbzrle-cache-size', 'max-postcopy-bandwidth',
            'max-cpu-throttle', 'multifd-compression',
            'multifd-zlib-level' ,'multifd-zstd-level',
-           'block-bitmap-mapping' ] }
+           'block-bitmap-mapping', 'direct-io' ] }
 
 ##
 # @MigrateSetParameters:
@@ -945,6 +948,9 @@
 #                        block device name if there is one, and to their node name
 #                        otherwise. (Since 5.2)
 #
+# @direct-io: Open migration files with O_DIRECT when possible. Not
+#             all migration transports support this. (since 8.1)
+#
 # Features:
 # @unstable: Member @x-checkpoint-delay is experimental.
 #
@@ -980,7 +986,8 @@
             '*multifd-compression': 'MultiFDCompression',
             '*multifd-zlib-level': 'uint8',
             '*multifd-zstd-level': 'uint8',
-            '*block-bitmap-mapping': [ 'BitmapMigrationNodeAlias' ] } }
+            '*block-bitmap-mapping': [ 'BitmapMigrationNodeAlias' ],
+            '*direct-io': 'bool' } }
 
 ##
 # @migrate-set-parameters:
@@ -1146,6 +1153,9 @@
 #                        block device name if there is one, and to their node name
 #                        otherwise. (Since 5.2)
 #
+# @direct-io: Open migration files with O_DIRECT when possible. Not
+#             all migration transports support this. (since 8.1)
+#
 # Features:
 # @unstable: Member @x-checkpoint-delay is experimental.
 #
@@ -1179,7 +1189,8 @@
             '*multifd-compression': 'MultiFDCompression',
             '*multifd-zlib-level': 'uint8',
             '*multifd-zstd-level': 'uint8',
-            '*block-bitmap-mapping': [ 'BitmapMigrationNodeAlias' ] } }
+            '*block-bitmap-mapping': [ 'BitmapMigrationNodeAlias' ],
+            '*direct-io': 'bool' } }
 
 ##
 # @query-migrate-parameters:
