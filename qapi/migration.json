@@ -889,6 +889,9 @@
 # @mode: Migration mode. See description in @MigMode. Default is 'normal'.
 #        (Since 8.2)
 #
+# @direct-io: Open migration files with O_DIRECT when possible. This
+#     requires that the 'fixed-ram' capability is enabled. (since 9.0)
+#
 # Features:
 #
 # @deprecated: Member @block-incremental is deprecated.  Use
@@ -922,7 +925,8 @@
            'block-bitmap-mapping',
            { 'name': 'x-vcpu-dirty-limit-period', 'features': ['unstable'] },
            'vcpu-dirty-limit',
-           'mode'] }
+           'mode',
+           'direct-io'] }
 
 ##
 # @MigrateSetParameters:
@@ -1081,6 +1085,9 @@
 # @mode: Migration mode. See description in @MigMode. Default is 'normal'.
 #        (Since 8.2)
 #
+# @direct-io: Open migration files with O_DIRECT when possible. This
+#     requires that the 'fixed-ram' capability is enabled. (since 9.0)
+#
 # Features:
 #
 # @deprecated: Member @block-incremental is deprecated.  Use
@@ -1134,7 +1141,8 @@
             '*x-vcpu-dirty-limit-period': { 'type': 'uint64',
                                             'features': [ 'unstable' ] },
             '*vcpu-dirty-limit': 'uint64',
-            '*mode': 'MigMode'} }
+            '*mode': 'MigMode',
+            '*direct-io': 'bool' } }
 
 ##
 # @migrate-set-parameters:
@@ -1309,6 +1317,9 @@
 # @mode: Migration mode. See description in @MigMode. Default is 'normal'.
 #        (Since 8.2)
 #
+# @direct-io: Open migration files with O_DIRECT when possible. This
+#     requires that the 'fixed-ram' capability is enabled. (since 9.0)
+#
 # Features:
 #
 # @deprecated: Member @block-incremental is deprecated.  Use
@@ -1359,7 +1370,8 @@
             '*x-vcpu-dirty-limit-period': { 'type': 'uint64',
                                             'features': [ 'unstable' ] },
             '*vcpu-dirty-limit': 'uint64',
-            '*mode': 'MigMode'} }
+            '*mode': 'MigMode',
+            '*direct-io': 'bool' } }
 
 ##
 # @query-migrate-parameters:
