@@ -21,9 +21,18 @@ void file_send_channel_create(QIOTaskFunc f, void *data)
     QIOChannelFile *ioc;
     QIOTask *task;
     Error *errp = NULL;
+    int flags = outgoing_args.flags;
 
-    ioc = qio_channel_file_new_path(outgoing_args.fname,
-                                    outgoing_args.flags,
+    if (migrate_fixed_ram() && migrate_use_direct_io()) {
+        /*
+         * Only use O_DIRECT for the secondary channels. These are
+         * used for sending ram pages and should be guaranteed to be
+         * at least 4k page aligned.
+         */
+        flags |= O_DIRECT;
+    }
+
+    ioc = qio_channel_file_new_path(outgoing_args.fname, flags,
                                     outgoing_args.mode, &errp);
     if (!ioc) {
         error_report("Error creating a channel");
