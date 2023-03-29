@@ -25,114 +25,53 @@ class Comparison(object):
         self._scenarios = scenarios
 
 COMPARISONS = [
-    # Looking at effect of pausing guest during migration
-    # at various stages of iteration over RAM
-    Comparison("pause-iters", scenarios = [
-        Scenario("pause-iters-0",
-                 pause=True, pause_iters=0),
-        Scenario("pause-iters-1",
-                 pause=True, pause_iters=1),
-        Scenario("pause-iters-5",
-                 pause=True, pause_iters=5),
-        Scenario("pause-iters-20",
-                 pause=True, pause_iters=20),
+    # Looking at effect of fixed-ram + multifd with varying numbers of
+    # channels
+    Comparison("fixed-ram", scenarios = [
+        Scenario("fixed-ram-multifd-channels-2",
+                 multifd=True, multifd_channels=2,
+                 fixed_ram=True, bandwidth=0),
+        Scenario("fixed-ram-multifd-channels-4",
+                 multifd=True, multifd_channels=4,
+                 fixed_ram=True, bandwidth=0),
+        Scenario("fixed-ram-multifd-channels-8",
+                 multifd=True, multifd_channels=8,
+                 fixed_ram=True, bandwidth=0),
+        Scenario("fixed-ram-multifd-channels-16",
+                 multifd=True, multifd_channels=16,
+                 fixed_ram=True, bandwidth=0),
+        Scenario("fixed-ram-multifd-channels-32",
+                 multifd=True, multifd_channels=32,
+                 fixed_ram=True, bandwidth=0),
+        Scenario("fixed-ram-multifd-channels-64",
+                 multifd=True, multifd_channels=64,
+                 fixed_ram=True, bandwidth=0),
+        Scenario("fixed-ram-multifd-channels-128",
+                 multifd=True, multifd_channels=128,
+                 fixed_ram=True, bandwidth=0)
     ]),
 
-
-    # Looking at use of post-copy in relation to bandwidth
-    # available for migration
-    Comparison("post-copy-bandwidth", scenarios = [
-        Scenario("post-copy-bw-100mbs",
-                 post_copy=True, bandwidth=12),
-        Scenario("post-copy-bw-300mbs",
-                 post_copy=True, bandwidth=37),
-        Scenario("post-copy-bw-1gbs",
-                 post_copy=True, bandwidth=125),
-        Scenario("post-copy-bw-10gbs",
-                 post_copy=True, bandwidth=1250),
-        Scenario("post-copy-bw-100gbs",
-                 post_copy=True, bandwidth=12500),
-    ]),
-
-
-    # Looking at effect of starting post-copy at different
-    # stages of the migration
-    Comparison("post-copy-iters", scenarios = [
-        Scenario("post-copy-iters-0",
-                 post_copy=True, post_copy_iters=0),
-        Scenario("post-copy-iters-1",
-                 post_copy=True, post_copy_iters=1),
-        Scenario("post-copy-iters-5",
-                 post_copy=True, post_copy_iters=5),
-        Scenario("post-copy-iters-20",
-                 post_copy=True, post_copy_iters=20),
-    ]),
-
-
-    # Looking at effect of auto-converge with different
-    # throttling percentage step rates
-    Comparison("auto-converge-iters", scenarios = [
-        Scenario("auto-converge-step-5",
-                 auto_converge=True, auto_converge_step=5),
-        Scenario("auto-converge-step-10",
-                 auto_converge=True, auto_converge_step=10),
-        Scenario("auto-converge-step-20",
-                 auto_converge=True, auto_converge_step=20),
-    ]),
-
-
-    # Looking at use of auto-converge in relation to bandwidth
-    # available for migration
-    Comparison("auto-converge-bandwidth", scenarios = [
-        Scenario("auto-converge-bw-100mbs",
-                 auto_converge=True, bandwidth=12),
-        Scenario("auto-converge-bw-300mbs",
-                 auto_converge=True, bandwidth=37),
-        Scenario("auto-converge-bw-1gbs",
-                 auto_converge=True, bandwidth=125),
-        Scenario("auto-converge-bw-10gbs",
-                 auto_converge=True, bandwidth=1250),
-        Scenario("auto-converge-bw-100gbs",
-                 auto_converge=True, bandwidth=12500),
-    ]),
-
-
-    # Looking at effect of multi-thread compression with
-    # varying numbers of threads
-    Comparison("compr-mt", scenarios = [
-        Scenario("compr-mt-threads-1",
-                 compression_mt=True, compression_mt_threads=1),
-        Scenario("compr-mt-threads-2",
-                 compression_mt=True, compression_mt_threads=2),
-        Scenario("compr-mt-threads-4",
-                 compression_mt=True, compression_mt_threads=4),
-    ]),
-
-
-    # Looking at effect of xbzrle compression with varying
-    # cache sizes
-    Comparison("compr-xbzrle", scenarios = [
-        Scenario("compr-xbzrle-cache-5",
-                 compression_xbzrle=True, compression_xbzrle_cache=5),
-        Scenario("compr-xbzrle-cache-10",
-                 compression_xbzrle=True, compression_xbzrle_cache=10),
-        Scenario("compr-xbzrle-cache-20",
-                 compression_xbzrle=True, compression_xbzrle_cache=10),
-        Scenario("compr-xbzrle-cache-50",
-                 compression_xbzrle=True, compression_xbzrle_cache=50),
-    ]),
-
-
-    # Looking at effect of multifd with
-    # varying numbers of channels
-    Comparison("compr-multifd", scenarios = [
-        Scenario("compr-multifd-channels-4",
-                 multifd=True, multifd_channels=2),
-        Scenario("compr-multifd-channels-8",
-                 multifd=True, multifd_channels=8),
-        Scenario("compr-multifd-channels-32",
-                 multifd=True, multifd_channels=32),
-        Scenario("compr-multifd-channels-64",
-                 multifd=True, multifd_channels=64),
+    Comparison("dio-fixed-ram", scenarios = [
+        Scenario("dio-fixed-ram-multifd-channels-2",
+                 multifd=True, multifd_channels=2,
+                 fixed_ram=True, bandwidth=0, direct_io=True),
+        Scenario("dio-fixed-ram-multifd-channels-4",
+                 multifd=True, multifd_channels=4,
+                 fixed_ram=True, bandwidth=0, direct_io=True),
+        Scenario("dio-fixed-ram-multifd-channels-8",
+                 multifd=True, multifd_channels=8,
+                 fixed_ram=True, bandwidth=0, direct_io=True),
+        Scenario("dio-fixed-ram-multifd-channels-16",
+                 multifd=True, multifd_channels=16,
+                 fixed_ram=True, bandwidth=0, direct_io=True),
+        Scenario("dio-fixed-ram-multifd-channels-32",
+                 multifd=True, multifd_channels=32,
+                 fixed_ram=True, bandwidth=0, direct_io=True),
+        Scenario("dio-fixed-ram-multifd-channels-64",
+                 multifd=True, multifd_channels=64,
+                 fixed_ram=True, bandwidth=0, direct_io=True),
+        Scenario("dio-fixed-ram-multifd-channels-128",
+                 multifd=True, multifd_channels=128,
+                 fixed_ram=True, bandwidth=0, direct_io=True)
     ]),
 ]
