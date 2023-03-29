@@ -220,7 +220,8 @@ class Engine(object):
             resp = src.command("migrate-set-parameters",
                                direct_io=scenario._direct_io)
 
-
+        if scenario._fixed_ram:
+            src.command("stop")
         resp = src.command("migrate", uri=connect_uri)
 
         post_copy = False
@@ -251,11 +252,12 @@ class Engine(object):
                     progress_history.append(progress)
 
                 if progress._status == "completed":
-                    print("Completed")
-                    if connect_uri[0:5] == "file:":
-                        if self._verbose:
-                            print("Migrating incoming")
-                        dst.command("migrate-incoming", uri=connect_uri)
+                    print("Transferred %5dMB of non-zero pages (total %5dMB @%5dMB/s in %4dms)" % (
+                        progress._ram._normal_bytes / (1024 * 1024),
+                        progress._ram._total_bytes / (1024 * 1024),
+                        progress._ram._transfer_rate_mbs / 8,
+                        progress._duration,
+                    ))
 
                     if self._verbose:
                         print("Sleeping %d seconds for final guest workload run" % self._sleep)
@@ -269,17 +271,17 @@ class Engine(object):
                 return [progress_history, src_qemu_time, src_vcpu_time]
 
             if self._verbose and (loop % 20) == 0:
-                print("Iter %d: remain %5dMB of %5dMB (total %5dMB @ %5dMb/sec)" % (
+                print("Iter %d: remain %5dMB of %5dMB (total %5dMB @ %5dMB/sec)" % (
                     progress._ram._iterations,
                     progress._ram._remaining_bytes / (1024 * 1024),
                     progress._ram._total_bytes / (1024 * 1024),
                     progress._ram._transferred_bytes / (1024 * 1024),
-                    progress._ram._transfer_rate_mbs,
+                    progress._ram._transfer_rate_mbs / 8,
                 ))
 
             if progress._ram._iterations > scenario._max_iters:
                 if self._verbose:
-                    print("No completion after %d iterations over RAM" % scenario._max_iters)
+                    print("No completion after %d/%d iterations over RAM" % (progress._ram._iterations, scenario._max_iters))
                 src.command("migrate_cancel")
                 continue
 
@@ -516,4 +518,3 @@ class Engine(object):
                 print(src.get_log())
                 print(dst.get_log())
             raise
-

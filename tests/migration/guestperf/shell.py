@@ -216,22 +216,20 @@ class BatchShell(BaseShell):
             for comparison in COMPARISONS:
                 compdir = os.path.join(args.output, comparison._name)
                 for scenario in comparison._scenarios:
-                    name = os.path.join(comparison._name, scenario._name)
-                    if not fnmatch.fnmatch(name, args.filter):
-                        if args.verbose:
-                            print("Skipping %s" % name)
-                        continue
-
-                    if args.verbose:
-                        print("Running %s" % name)
-
-                    dirname = os.path.join(args.output, comparison._name)
-                    filename = os.path.join(dirname, scenario._name + ".json")
-                    if not os.path.exists(dirname):
-                        os.makedirs(dirname)
-                    report = engine.run(hardware, scenario)
-                    with open(filename, "w") as fh:
-                        print(report.to_json(), file=fh)
+                    for n in range(10):
+                        name = os.path.join(comparison._name, scenario._name)
+                        if not fnmatch.fnmatch(name, args.filter):
+                            if args.verbose:
+                                print("Skipping %s" % name)
+                            continue
+                        print("Running %s-%d" % (name,n))
+                        dirname = os.path.join(args.output, comparison._name)
+                        filename = os.path.join(dirname, scenario._name + ".json")
+                        if not os.path.exists(dirname):
+                            os.makedirs(dirname)
+                        report = engine.run(hardware, scenario)
+                        with open(filename, "w") as fh:
+                            print(report.to_json(), file=fh)
         except Exception as e:
             print("Error: %s" % str(e), file=sys.stderr)
             if args.debug:
