@@ -2561,6 +2561,9 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
     } else if (strstart(uri, "fd:", &p)) {
         fd_start_outgoing_migration(s, p, &local_err);
     } else if (strstart(uri, "file:", &p)) {
+        if (migrate_fixed_ram()) {
+            vm_stop_force_state(RUN_STATE_PAUSED);
+        }
         file_start_outgoing_migration(s, p, &local_err);
     } else {
         if (!(has_resume && resume)) {

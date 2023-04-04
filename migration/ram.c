@@ -1038,7 +1038,8 @@ static void dirty_bitmap_clear_section(MemoryRegionSection *section,
      * only when starting migration or during postcopy recovery where
      * we don't have concurrent access.
      */
-    if (!migration_in_postcopy() && !migrate_background_snapshot()) {
+    if (!migration_in_postcopy() && !migrate_background_snapshot() &&
+        !migrate_fixed_ram()) {
         migration_clear_memory_region_dirty_bitmap_range(rb, start, npages);
     }
     *cleared_bits += bitmap_count_one_with_offset(rb->bmap, start, npages);
@@ -2391,7 +2392,34 @@ static int ram_save_target_page_legacy(RAMState *rs, PageSearchStatus *pss)
 
     return ram_save_page(rs, pss);
 }
+/*
+static int ram_save_target_page_fixed(RAMState *rs, PageSearchStatus *pss)
+{
+    QEMUFile *file = pss->pss_channel;
+    RAMBlock *block = pss->block;
+    ram_addr_t offset = ((ram_addr_t)pss->page) << TARGET_PAGE_BITS;
+    uint8_t *buf = block->host + offset;
 
+    if (buffer_is_zero(buf, TARGET_PAGE_SIZE)) {
+        ram_release_page(block->idstr, offset);
+        stat64_add(&ram_atomic_counters.duplicate, 1);
+        return 1;
+    }
+
+    if (migrate_use_multifd()) {
+        return ram_save_multifd_page(file, block, offset);
+    }
+
+    trace_ram_save_page(block->idstr, (uint64_t)offset, buf);
+
+    qemu_put_buffer_at(file, buf, TARGET_PAGE_SIZE, block->pages_offset + offset);
+    set_bit(offset >> TARGET_PAGE_BITS, block->shadow_bmap);
+    ram_transferred_add(TARGET_PAGE_SIZE);
+    stat64_add(&ram_atomic_counters.normal, 1);
+
+    return 1;
+}
+*/
 /* Should be called before sending a host page */
 static void pss_host_page_prepare(PageSearchStatus *pss)
 {
@@ -2723,7 +2751,7 @@ static void ram_save_cleanup(void *opaque)
     RAMBlock *block;
 
     /* We don't use dirty log with background snapshots */
-    if (!migrate_background_snapshot()) {
+    if (!migrate_background_snapshot() && !migrate_fixed_ram()) {
         /* caller have hold iothread lock or is in a bh, so there is
          * no writing race against the migration bitmap
          */
@@ -3140,7 +3168,7 @@ static void ram_init_bitmaps(RAMState *rs)
     WITH_RCU_READ_LOCK_GUARD() {
         ram_list_init_bitmaps();
         /* We don't use dirty log with background snapshots */
-        if (!migrate_background_snapshot()) {
+        if (!migrate_background_snapshot() && !migrate_fixed_ram()) {
             memory_global_dirty_log_start(GLOBAL_DIRTY_MIGRATION);
             migration_bitmap_sync_precopy(rs);
         }
@@ -3385,6 +3413,11 @@ static int ram_save_iterate(QEMUFile *f, void *opaque)
     int64_t t0;
     int done = 0;
 
+    if (migrate_fixed_ram()) {
+        /* Skip directly to complete phase */
+        return 1;
+    }
+
     if (blk_mig_bulk_active()) {
         /* Avoid transferring ram during bulk phase of block migration as
          * the bulk phase will usually take a long time and transferring
@@ -3494,6 +3527,72 @@ out:
     return done;
 }
 
+static int fixed_ram_save_host_page(PageSearchStatus *pss, RAMState *rs)
+{
+    int ret;
+
+    pss_host_page_prepare(pss);
+    qemu_mutex_lock(&rs->bitmap_mutex);
+
+    do {
+        ret = migration_ops->ram_save_target_page(rs, pss);
+        if (ret < 0) {
+            goto out;
+        }
+
+        rs->target_page_count++;
+        rs->migration_dirty_pages--;
+        rs->last_page = pss->page;
+
+        clear_bit(pss->page, pss->block->bmap);
+        pss_find_next_dirty(pss);
+    } while (pss_within_range(pss));
+
+out:
+    qemu_mutex_unlock(&rs->bitmap_mutex);
+    pss_host_page_finish(pss);
+
+    return ret;
+}
+
+static int fixed_ram_save_complete(QEMUFile *f, void *opaque)
+{
+    RAMState **temp = opaque;
+    RAMState *rs = *temp;
+    PageSearchStatus *pss = &rs->pss[RAM_CHANNEL_PRECOPY];
+    RAMBlock *block = NULL;
+    int ret;
+
+    WITH_RCU_READ_LOCK_GUARD() {
+        RAMBLOCK_FOREACH_NOT_IGNORED(block) {
+            rs->last_seen_block = block;
+            rs->last_page = 0;
+
+            pss_init(pss, rs->last_seen_block, rs->last_page);
+
+            while (true) {
+                ram_addr_t addr = ((ram_addr_t)pss->page) << TARGET_PAGE_BITS;
+
+                if (!offset_in_ramblock(pss->block, addr)) {
+                    break;
+                }
+
+                ret = fixed_ram_save_host_page(pss, rs);
+                if (ret < 0) {
+                    error_report("%s: failed to save ramblock %s",
+                                 __func__, block->idstr);
+                    goto out;
+                }
+            }
+        }
+        ram_save_shadow_bmap(f);
+    }
+
+    ret = multifd_send_sync_main(rs->pss[RAM_CHANNEL_PRECOPY].pss_channel);
+out:
+    return ret;
+}
+
 /**
  * ram_save_complete: function called to send the remaining amount of ram
  *
@@ -3509,6 +3608,10 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     RAMState **temp = opaque;
     RAMState *rs = *temp;
     int ret = 0;
+
+    if (migrate_fixed_ram()) {
+        return fixed_ram_save_complete(f, opaque);
+    }
 
     rs->last_stage = !migration_in_colo_state();
 
@@ -3570,6 +3673,10 @@ static void ram_state_pending_estimate(void *opaque, uint64_t *must_precopy,
 
     uint64_t remaining_size = rs->migration_dirty_pages * TARGET_PAGE_SIZE;
 
+    if (migrate_fixed_ram()) {
+        return;
+    }
+
     if (migrate_postcopy_ram()) {
         /* We can do postcopy, and all the data is postcopiable */
         *can_postcopy += remaining_size;
@@ -3585,6 +3692,10 @@ static void ram_state_pending_exact(void *opaque, uint64_t *must_precopy,
     RAMState *rs = *temp;
 
     uint64_t remaining_size = rs->migration_dirty_pages * TARGET_PAGE_SIZE;
+
+    if (migrate_fixed_ram()) {
+        return;
+    }
 
     if (!migration_in_postcopy()) {
         qemu_mutex_lock_iothread();
@@ -4696,9 +4807,26 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
     return ret;
 }
 
+static bool fixed_ram_has_postcopy(void *opaque)
+{
+    /*
+     * No postcopy for now. The fixed-ram stream format is intended
+     * for snapshot-like migration of stopped guests into a
+     * file. There is no destination QEMU running concomitantly. We
+     * could however have postcopy in the incoming side of the
+     * migration, but that is not implemented yet.
+     */
+    return false;
+}
+
 static bool ram_has_postcopy(void *opaque)
 {
     RAMBlock *rb;
+
+    if (migrate_fixed_ram()) {
+        return fixed_ram_has_postcopy(opaque);
+    }
+
     RAMBLOCK_FOREACH_NOT_IGNORED(rb) {
         if (ramblock_is_pmem(rb)) {
             info_report("Block: %s, host: %p is a nvdimm memory, postcopy"

@@ -1,8 +1,9 @@
 #include "qemu/osdep.h"
 #include "io/channel-file.h"
 #include "file.h"
-#include "qemu/error-report.h"
 #include "migration.h"
+#include "qemu/error-report.h"
+#include "sysemu/runstate.h"
 
 static struct FileOutgoingArgs {
     char *fname;
@@ -83,6 +84,7 @@ void file_start_outgoing_migration(MigrationState *s, const char *fname, Error *
     outgoing_args.mode = mode;
 
     qio_channel_set_name(QIO_CHANNEL(ioc), "migration-file-outgoing");
+
     migration_channel_connect(s, QIO_CHANNEL(ioc), NULL, NULL);
     object_unref(OBJECT(ioc));
 }
