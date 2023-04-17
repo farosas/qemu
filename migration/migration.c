@@ -579,6 +579,9 @@ static void process_incoming_migration_bh(void *opaque)
     } else if (migration_incoming_colo_enabled()) {
         migration_incoming_disable_colo();
         vm_start();
+    } else if (autostart && migrate_fixed_ram() && global_state_received() &&
+               global_state_get_runstate() == RUN_STATE_PAUSED) {
+        vm_start();
     } else {
         runstate_set(global_state_get_runstate());
     }
@@ -4394,7 +4397,7 @@ fail:
     return NULL;
 }
 
-static int migrate_check_fixed_ram(MigrationState *s, Error **errp)
+static int fixed_ram_save_setup(MigrationState *s, Error **errp)
 {
     if (!s->enabled_capabilities[MIGRATION_CAPABILITY_FIXED_RAM]) {
         return 0;
@@ -4402,6 +4405,16 @@ static int migrate_check_fixed_ram(MigrationState *s, Error **errp)
 
     if (!qemu_file_is_seekable(s->to_dst_file)) {
         error_setg(errp, "Directly mapped memory requires a seekable transport");
+        return -1;
+    }
+
+    /*
+     * Fixed-ram migration is currently only used to address "vm
+     * suspend" scenarios, so the VM would always be stopped at the
+     * end of migration. We can stop now and use the knowledge that
+     * the VM is stopped to implement optimizations down the line.
+     */
+    if (vm_stop_force_state(RUN_STATE_PAUSED)) {
         return -1;
     }
 
@@ -4474,7 +4487,7 @@ void migrate_fd_connect(MigrationState *s, Error *error_in)
         }
     }
 
-    if (migrate_check_fixed_ram(s, &local_err) < 0) {
+    if (fixed_ram_save_setup(s, &local_err) < 0) {
         migrate_fd_cleanup(s);
         migrate_fd_error(s, local_err);
         return;
