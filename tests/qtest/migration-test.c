@@ -1380,6 +1380,7 @@ static void test_precopy_common(MigrateCommon *args)
 {
     QTestState *from, *to;
     void *data_hook = NULL;
+    QDict *resp;
 
     if (test_migrate_start(&from, &to, args->listen_uri, &args->start)) {
         return;
@@ -1445,13 +1446,17 @@ static void test_precopy_common(MigrateCommon *args)
                 qtest_qmp_eventwait(from, "STOP");
             }
         } else {
-            wait_for_migration_complete(to);
+            wait_for_migration_complete(from);
 
             qtest_qmp_assert_success(to, "{ 'execute' : 'cont'}");
         }
 
         if (!got_resume) {
-            qtest_qmp_eventwait(to, "RESUME");
+            resp = qtest_qmp_eventwait_ref(to, "RESUME");
+            if (!resp) {
+                qtest_qmp_assert_success(to, "{ 'execute' : 'cont'}");
+                qtest_qmp_eventwait(to, "RESUME");
+            }
         }
 
         wait_for_serial("dest_serial");

@@ -835,6 +835,11 @@ QDict *qtest_qmp_eventwait_ref(QTestState *s, const char *event)
 
     for (;;) {
         response = qtest_qmp_receive_dict(s);
+
+        if (!response) {
+            return NULL;
+        }
+
         if ((qdict_haskey(response, "event")) &&
             (strcmp(qdict_get_str(response, "event"), event) == 0)) {
             return response;

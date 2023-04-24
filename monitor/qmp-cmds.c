@@ -15,6 +15,7 @@
 
 #include "qemu/osdep.h"
 #include "qemu/sockets.h"
+#include "qemu/error-report.h"
 #include "monitor-internal.h"
 #include "monitor/qdev.h"
 #include "monitor/qmp-helpers.h"
@@ -69,6 +70,8 @@ void qmp_cont(Error **errp)
     BlockJob *job;
     Error *local_err = NULL;
 
+    warn_report("Received cont\n");
+
     /* if there is a dump in background, we should wait until the dump
      * finished */
     if (qemu_system_dump_in_progress()) {
@@ -78,10 +81,13 @@ void qmp_cont(Error **errp)
 
     if (runstate_needs_reset()) {
         error_setg(errp, "Resetting the Virtual Machine is required");
+        warn_report("Needs reset\n");
         return;
     } else if (runstate_check(RUN_STATE_SUSPENDED)) {
+        warn_report("Suspended\n");
         return;
     } else if (runstate_check(RUN_STATE_FINISH_MIGRATE)) {
+        warn_report("Finish migrate\n");
         error_setg(errp, "Migration is not finalized yet");
         return;
     }
@@ -106,12 +112,15 @@ void qmp_cont(Error **errp)
     bdrv_activate_all(&local_err);
     if (local_err) {
         error_propagate(errp, local_err);
+        warn_report("block err\n");
         return;
     }
 
     if (runstate_check(RUN_STATE_INMIGRATE)) {
+        warn_report("in migrate\n");
         autostart = 1;
     } else {
+        warn_report("start\n");
         vm_start();
     }
 }

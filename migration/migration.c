@@ -567,14 +567,21 @@ static void process_incoming_migration_bh(void *opaque)
     if (!global_state_received() ||
         global_state_get_runstate() == RUN_STATE_RUNNING) {
         if (autostart) {
+            warn_report("starting w/autostart\n");
             vm_start();
         } else {
+            warn_report("paused!!\n");
             runstate_set(RUN_STATE_PAUSED);
         }
+    } else if (autostart &&
+               global_state_get_runstate() != RUN_STATE_RUNNING) {
+        warn_report("forcing w/autostart\n");
+        vm_start();
     } else if (migration_incoming_colo_enabled()) {
         migration_incoming_disable_colo();
         vm_start();
     } else {
+        warn_report("default state %d\n", global_state_get_runstate());
         runstate_set(global_state_get_runstate());
     }
     /*
@@ -584,6 +591,7 @@ static void process_incoming_migration_bh(void *opaque)
      */
     migrate_set_state(&mis->state, MIGRATION_STATUS_ACTIVE,
                       MIGRATION_STATUS_COMPLETED);
+    warn_report("dst complete\n");
     qemu_bh_delete(mis->bh);
     migration_incoming_state_destroy();
 }
