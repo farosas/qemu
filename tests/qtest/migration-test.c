@@ -1445,7 +1445,7 @@ static void test_precopy_common(MigrateCommon *args)
                 qtest_qmp_eventwait(from, "STOP");
             }
         } else {
-            wait_for_migration_complete(from);
+            wait_for_migration_complete(to);
 
             qtest_qmp_assert_success(to, "{ 'execute' : 'cont'}");
         }
