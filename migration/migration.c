@@ -3179,6 +3179,20 @@ fail:
     return NULL;
 }
 
+static int migrate_check_fixed_ram(MigrationState *s, Error **errp)
+{
+    if (!migrate_fixed_ram()) {
+        return 0;
+    }
+
+    if (!qemu_file_is_seekable(s->to_dst_file)) {
+        error_setg(errp, "Directly mapped memory requires a seekable transport");
+        return -1;
+    }
+
+    return 0;
+}
+
 void migrate_fd_connect(MigrationState *s, Error *error_in)
 {
     Error *local_err = NULL;
@@ -3252,6 +3266,12 @@ void migrate_fd_connect(MigrationState *s, Error *error_in)
      */
     if (migrate_postcopy_preempt() && s->preempt_pre_7_2) {
         postcopy_preempt_setup(s);
+    }
+
+    if (migrate_check_fixed_ram(s, &local_err) < 0) {
+        migrate_fd_cleanup(s);
+        migrate_fd_error(s, local_err);
+        return;
     }
 
     if (resume) {

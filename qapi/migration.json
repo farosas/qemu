@@ -424,6 +424,9 @@
 #                or migration will not even start. NOTE: If the migration fails during
 #                postcopy the VM will fail.  (since 2.6)
 #
+# @fixed-ram: Migrate using fixed offsets for each RAM page. Requires
+#             a seekable transport such as a file.  (since 8.1)
+#
 # @x-colo: If enabled, migration will never end, and the state of the VM on the
 #          primary side will be migrated continuously to the VM on secondary
 #          side, this process is called COarse-Grain LOck Stepping (COLO) for
@@ -485,7 +488,7 @@
 ##
 { 'enum': 'MigrationCapability',
   'data': ['xbzrle', 'rdma-pin-all', 'auto-converge', 'zero-blocks',
-           'compress', 'events', 'postcopy-ram',
+           'compress', 'events', 'postcopy-ram', 'fixed-ram',
            { 'name': 'x-colo', 'features': [ 'unstable' ] },
            'release-ram',
            'block', 'return-path', 'pause-before-switchover', 'multifd',
