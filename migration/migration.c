@@ -169,7 +169,8 @@ INITIALIZE_MIGRATE_CAPS_SET(check_caps_background_snapshot,
     MIGRATION_CAPABILITY_X_COLO,
     MIGRATION_CAPABILITY_VALIDATE_UUID,
     MIGRATION_CAPABILITY_ZERO_COPY_SEND,
-    MIGRATION_CAPABILITY_FIXED_RAM);
+    MIGRATION_CAPABILITY_FIXED_RAM,
+    MIGRATION_CAPABILITY_SUSPEND);
 
 /* When we add fault tolerance, we could have several
    migrations at once.  For now we don't need to add
@@ -578,6 +579,10 @@ static void process_incoming_migration_bh(void *opaque)
         }
     } else if (migration_incoming_colo_enabled()) {
         migration_incoming_disable_colo();
+        vm_start();
+    } else if (global_state_received() &&
+               global_state_get_runstate() == RUN_STATE_PAUSED &&
+               (autostart || migrate_suspend())) {
         vm_start();
     } else {
         runstate_set(global_state_get_runstate());
@@ -2713,6 +2718,13 @@ bool migrate_ignore_shared(void)
     return s->enabled_capabilities[MIGRATION_CAPABILITY_X_IGNORE_SHARED];
 }
 
+bool migrate_suspend(void)
+{
+    MigrationState *s = migrate_get_current();
+
+    return s->enabled_capabilities[MIGRATION_CAPABILITY_SUSPEND];
+}
+
 bool migrate_validate_uuid(void)
 {
     MigrationState *s;
@@ -4403,6 +4415,12 @@ static int migrate_check_fixed_ram(MigrationState *s, Error **errp)
     if (!qemu_file_is_seekable(s->to_dst_file)) {
         error_setg(errp, "Directly mapped memory requires a seekable transport");
         return -1;
+    }
+
+    if (migrate_suspend()) {
+        if (vm_stop_force_state(RUN_STATE_PAUSED)) {
+            return -1;
+        }
     }
 
     return 0;

@@ -446,7 +446,7 @@ bool migrate_use_block(void);
 bool migrate_use_block_incremental(void);
 int migrate_max_cpu_throttle(void);
 bool migrate_use_return_path(void);
-
+bool migrate_suspend(void);
 uint64_t ram_get_total_transferred_pages(void);
 
 bool migrate_use_compression(void);

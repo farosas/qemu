@@ -1574,6 +1574,9 @@ static void *migrate_multifd_fixed_ram_start(QTestState *from, QTestState *to)
     migrate_set_capability(from, "multifd", true);
     migrate_set_capability(to, "multifd", true);
 
+    migrate_set_capability(from, "suspend", true);
+    migrate_set_capability(to, "suspend", true);
+
     return NULL;
 }
 
