@@ -40,6 +40,7 @@
 #include "qapi/qmp/qstring.h"
 #include "qemu/qemu-print.h"
 #include "sysemu/block-backend.h"
+#include "monitor/monitor-internal.h"
 
 BlockDeviceInfo *bdrv_block_device_info(BlockBackend *blk,
                                         BlockDriverState *bs,
@@ -222,6 +223,7 @@ int bdrv_query_snapshot_info_list(BlockDriverState *bs,
     return 0;
 }
 
+IOThread *mon_dispatch_iothread;
 /**
  * Helper function for other query info functions.  Store information about @bs
  * in @info, setting @errp on error.
@@ -237,6 +239,7 @@ static void bdrv_do_query_node_info(BlockDriverState *bs,
     Error *err = NULL;
 
     aio_context_acquire(bdrv_get_aio_context(bs));
+    bs->unlocked_aio_context = mon_dispatch_iothread->ctx;
 
     size = bdrv_getlength(bs);
     if (size < 0) {
@@ -306,6 +309,7 @@ static void bdrv_do_query_node_info(BlockDriverState *bs,
     }
 
 out:
+    bs->unlocked_aio_context = NULL;
     aio_context_release(bdrv_get_aio_context(bs));
 }
 

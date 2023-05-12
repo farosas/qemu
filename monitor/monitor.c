@@ -691,6 +691,7 @@ void monitor_cleanup(void)
      */
     if (mon_iothread) {
         iothread_stop(mon_iothread);
+        iothread_stop(mon_dispatch_iothread);
     }
 
     /* Flush output buffers and destroy monitors */
@@ -711,6 +712,9 @@ void monitor_cleanup(void)
     if (mon_iothread) {
         iothread_destroy(mon_iothread);
         mon_iothread = NULL;
+
+        iothread_destroy(mon_dispatch_iothread);
+        mon_dispatch_iothread = NULL;
     }
 }
 
@@ -734,6 +738,7 @@ void monitor_init_globals(void)
     qmp_dispatcher_co = qemu_coroutine_create(monitor_qmp_dispatcher_co, NULL);
     qatomic_mb_set(&qmp_dispatcher_co_busy, true);
     aio_co_schedule(iohandler_get_aio_context(), qmp_dispatcher_co);
+    mon_dispatch_iothread = iothread_create("mon_dispatch_iothread", &error_abort);
 }
 
 int monitor_init(MonitorOptions *opts, bool allow_hmp, Error **errp)

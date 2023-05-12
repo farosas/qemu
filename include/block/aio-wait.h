@@ -108,6 +108,29 @@ extern AioWait global_aio_wait;
     qatomic_dec(&wait_->num_waiters);                              \
     waited_; })
 
+#define AIO_WAIT_WHILE_UNLOCKED_FULL(ctx, cond) ({                 \
+    bool waited_ = false;                                          \
+    AioWait *wait_ = &global_aio_wait;                             \
+    AioContext *ctx_ = (ctx);                                      \
+    /* Increment wait_->num_waiters before evaluating cond. */     \
+    qatomic_inc(&wait_->num_waiters);                              \
+    /* Paired with smp_mb in aio_wait_kick(). */                   \
+    smp_mb__after_rmw();                                           \
+    while ((cond)) {                                               \
+        if (ctx_) {                                                \
+            aio_context_release(ctx_);                             \
+            qemu_mutex_unlock_iothread();                          \
+        }                                                          \
+        aio_poll(qemu_get_aio_context(), true);                    \
+        if (ctx_) {                                                \
+            qemu_mutex_lock_iothread();                            \
+            aio_context_acquire(ctx_);                             \
+        }                                                          \
+        waited_ = true;                                            \
+    }                                                              \
+    qatomic_dec(&wait_->num_waiters);                              \
+    waited_; })
+
 #define AIO_WAIT_WHILE(ctx, cond)                                  \
     AIO_WAIT_WHILE_INTERNAL(ctx, cond, true)
 

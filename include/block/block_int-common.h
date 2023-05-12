@@ -1046,6 +1046,7 @@ struct BlockDriverState {
     void *opaque;
 
     AioContext *aio_context; /* event loop used for fd handlers, timers, etc */
+    AioContext *unlocked_aio_context;
     /*
      * long-running tasks intended to always use the same AioContext as this
      * BDS may register themselves in this list to be notified of changes

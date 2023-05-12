@@ -71,6 +71,7 @@ class FuncDecl:
         self.args = [ParamDecl(arg.strip()) for arg in args.split(',')]
         self.create_only_co = 'mixed' not in variant
         self.graph_rdlock = 'bdrv_rdlock' in variant
+        self.unlocked = 'unlocked' in variant
 
         self.wrapper_type = wrapper_type
 
@@ -197,6 +198,42 @@ def create_co_wrapper(func: FuncDecl) -> str:
     {func.ret}
 }}"""
 
+def create_co_wrapper_unlocked(func: FuncDecl) -> str:
+    """
+    Assumes we are not in coroutine, and creates one
+    """
+    name = func.target_name
+    struct_name = func.struct_name
+
+    return f"""\
+{func.return_type} {func.name}({ func.gen_list('{decl}') })
+{{
+    {struct_name} s = {{
+        .poll_state.in_progress = true,
+
+{ func.gen_block('        .{name} = {name},') }
+    }};
+    assert(!qemu_in_coroutine());
+
+    if (bs->unlocked_aio_context) {{
+        s.poll_state.ctx = bs->unlocked_aio_context;
+    }} else {{
+        s.poll_state.ctx = bdrv_get_aio_context(bs);
+    }}
+
+    s.poll_state.co = qemu_coroutine_create({name}_entry, &s);
+
+    assert(!qemu_in_coroutine());
+
+    if (bs->unlocked_aio_context) {{
+        aio_co_enter(s.poll_state.ctx, s.poll_state.co);
+        AIO_WAIT_WHILE_UNLOCKED_FULL(bdrv_get_aio_context(bs), s.poll_state.in_progress);
+    }} else {{
+        bdrv_poll_co(&s.poll_state);
+    }}
+
+    {func.ret}
+}}"""
 
 def gen_co_wrapper(func: FuncDecl) -> str:
     assert not '_co_' in func.name
@@ -214,6 +251,9 @@ def gen_co_wrapper(func: FuncDecl) -> str:
     creation_function = create_mixed_wrapper
     if func.create_only_co:
         creation_function = create_co_wrapper
+
+    if func.unlocked:
+        creation_function = create_co_wrapper_unlocked
 
     return f"""\
 /*

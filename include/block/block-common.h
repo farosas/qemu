@@ -53,6 +53,7 @@
 #define co_wrapper_mixed               no_coroutine_fn coroutine_mixed_fn
 #define co_wrapper_bdrv_rdlock         no_coroutine_fn
 #define co_wrapper_mixed_bdrv_rdlock   no_coroutine_fn coroutine_mixed_fn
+#define co_wrapper_bdrv_rdlock_unlocked         no_coroutine_fn
 
 /*
  * no_co_wrapper: Function specifier used by block-coroutine-wrapper.py
