@@ -2287,6 +2287,54 @@ static void test_multifd_file_fixed_ram(void)
     test_file_common(&args, true);
 }
 
+#ifdef O_DIRECT
+static void *migrate_fixed_ram_dio_start(QTestState *from,
+                                                 QTestState *to)
+{
+    migrate_set_parameter_bool(from, "direct-io", true);
+    migrate_set_parameter_bool(to, "direct-io", true);
+
+    return NULL;
+}
+
+static void *migrate_multifd_fixed_ram_dio_start(QTestState *from,
+                                                 QTestState *to)
+{
+    migrate_multifd_fixed_ram_start(from, to);
+    return migrate_fixed_ram_dio_start(from, to);
+}
+
+static void test_multifd_file_fixed_ram_dio(void)
+{
+    g_autofree char *uri = g_strdup_printf("file:%s/%s", tmpfs,
+                                           FILE_TEST_FILENAME);
+    MigrateCommon args = {
+        .connect_uri = uri,
+        .listen_uri = "defer",
+        .start_hook = migrate_multifd_fixed_ram_dio_start,
+    };
+
+    if (!probe_o_direct_support(tmpfs)) {
+        g_test_skip("Filesystem does not support O_DIRECT");
+        return;
+    }
+
+    test_file_common(&args, true);
+}
+
+static void test_precopy_file_fixed_ram_dio(void)
+{
+    g_autofree char *uri = g_strdup_printf("file:%s/%s", tmpfs,
+                                           FILE_TEST_FILENAME);
+    MigrateCommon args = {
+        .connect_uri = uri,
+        .listen_uri = "defer",
+        .start_hook = migrate_fixed_ram_dio_start,
+    };
+
+    test_file_common(&args, true);
+}
+#endif /* O_DIRECT */
 
 static void test_precopy_tcp_plain(void)
 {
@@ -3632,6 +3680,13 @@ int main(int argc, char **argv)
 #ifndef _WIN32
     migration_test_add("/migration/multifd/fd/fixed-ram",
                        test_multifd_fd_fixed_ram);
+#endif
+
+#ifdef O_DIRECT
+    migration_test_add("/migration/precopy/file/fixed-ram/dio",
+                       test_precopy_file_fixed_ram_dio);
+    migration_test_add("/migration/multifd/file/fixed-ram/dio",
+                       test_multifd_file_fixed_ram_dio);
 #endif
 
 #ifdef CONFIG_GNUTLS
