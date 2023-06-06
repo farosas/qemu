@@ -762,7 +762,7 @@ out:
         qemu_sem_post(&multifd_send_state->channels_ready);
     }
 
-    qmp_migration_thread_remove(thread);
+    qmp_migration_threads_remove(thread);
 
     qemu_mutex_lock(&p->mutex);
     p->running = false;

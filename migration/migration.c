@@ -3000,7 +3000,7 @@ static void *migration_thread(void *opaque)
     }
 
     trace_migration_thread_after_loop();
-    qmp_migration_thread_remove(thread);
+    qmp_migration_threads_remove(thread);
     migration_iteration_finish(s);
     object_unref(OBJECT(s));
     rcu_unregister_thread();
