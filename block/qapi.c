@@ -680,11 +680,14 @@ BlockInfoList *coroutine_fn qmp_query_block(Error **errp)
         }
 
         info = g_malloc0(sizeof(*info));
+        blk_ref(blk);
         bdrv_query_info(blk, &info->value, &local_err);
+        blk_unref(blk);
         if (local_err) {
             error_propagate(errp, local_err);
             g_free(info);
             qapi_free_BlockInfoList(head);
+
             return NULL;
         }
 
