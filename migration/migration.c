@@ -2925,7 +2925,7 @@ static void *migration_thread(void *opaque)
     MigThrError thr_error;
     bool urgent = false;
 
-    thread = qmp_migration_thread_add("live_migration", qemu_get_thread_id());
+    thread = qmp_migration_threads_add("live_migration", qemu_get_thread_id());
 
     rcu_register_thread();
 

@@ -28,7 +28,7 @@ void qmp_migration_threads_cleanup(void)
     qemu_mutex_destroy(&migration_threads_lock);
 }
 
-MigrationThread *qmp_migration_thread_add(const char *name, int thread_id)
+MigrationThread *qmp_migration_threads_add(const char *name, int thread_id)
 {
     MigrationThread *thread =  g_new0(MigrationThread, 1);
     thread->name = name;
@@ -41,7 +41,7 @@ MigrationThread *qmp_migration_thread_add(const char *name, int thread_id)
     return thread;
 }
 
-void qmp_migration_thread_remove(MigrationThread *thread)
+void qmp_migration_threads_remove(MigrationThread *thread)
 {
     QEMU_LOCK_GUARD(&migration_threads_lock);
     if (thread) {

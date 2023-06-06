@@ -24,5 +24,5 @@ struct MigrationThread {
 void qmp_migration_threads_init(void);
 void qmp_migration_threads_cleanup(void);
 
-MigrationThread *qmp_migration_thread_add(const char *name, int thread_id);
-void qmp_migration_thread_remove(MigrationThread *info);
+MigrationThread *qmp_migration_threads_add(const char *name, int thread_id);
+void qmp_migration_threads_remove(MigrationThread *info);
