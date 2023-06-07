@@ -30,10 +30,15 @@
 #include "block/snapshot.h"
 #include "qapi/qapi-types-block-core.h"
 
-BlockDeviceInfo * GRAPH_RDLOCK
-bdrv_block_device_info(BlockBackend *blk, BlockDriverState *bs,
-                       bool flat, Error **errp);
-
+BlockDeviceInfo *coroutine_fn GRAPH_RDLOCK
+bdrv_co_block_device_info(BlockBackend *blk,
+                          BlockDriverState *bs,
+                          bool flat,
+                          Error **errp);
+BlockDeviceInfo *co_wrapper bdrv_block_device_info(BlockBackend *blk,
+                                                   BlockDriverState *bs,
+                                                   bool flat,
+                                                   Error **errp);
 int GRAPH_RDLOCK
 bdrv_query_snapshot_info_list(BlockDriverState *bs,
                               SnapshotInfoList **p_list,
