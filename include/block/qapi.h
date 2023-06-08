@@ -31,9 +31,6 @@
 #include "qapi/qapi-types-block-core.h"
 
 BlockDeviceInfo *coroutine_fn GRAPH_RDLOCK
-bdrv_co_block_device_info(BlockBackend *blk, BlockDriverState *bs, bool flat,
-                          Error **errp);
-BlockDeviceInfo *co_wrapper_bdrv_rdlock
 bdrv_block_device_info(BlockBackend *blk, BlockDriverState *bs, bool flat,
                        Error **errp);
 int GRAPH_RDLOCK
