@@ -99,9 +99,8 @@ qtests_i386 = \
    'cpu-plug-test',
    'q35-test',
    'vmgenid-test',
-   'migration-test',
    'test-x86-cpuid-compat',
-   'numa-test'
+   'numa-test',
   ]
 
 if dbus_display and targetos != 'windows'
@@ -167,7 +166,7 @@ qtests_ppc64 = \
   (slirp.found() ? ['pxe-test'] : []) +              \
   (config_all_devices.has_key('CONFIG_USB_UHCI') ? ['usb-hcd-uhci-test'] : []) +             \
   (config_all_devices.has_key('CONFIG_USB_XHCI_NEC') ? ['usb-hcd-xhci-test'] : []) +         \
-  qtests_pci + ['migration-test', 'numa-test', 'cpu-plug-test', 'drive_del-test']
+  qtests_pci + ['numa-test', 'cpu-plug-test', 'drive_del-test']
 
 qtests_sh4 = (config_all_devices.has_key('CONFIG_ISA_TESTDEV') ? ['endianness-test'] : [])
 qtests_sh4eb = (config_all_devices.has_key('CONFIG_ISA_TESTDEV') ? ['endianness-test'] : [])
@@ -222,8 +221,7 @@ qtests_aarch64 = \
    config_all_devices.has_key('CONFIG_TPM_TIS_I2C') ? ['tpm-tis-i2c-test'] : []) + \
   ['arm-cpu-features',
    'numa-test',
-   'boot-serial-test',
-   'migration-test']
+   'boot-serial-test']
 
 qtests_s390x = \
   qtests_filter + \
@@ -231,8 +229,7 @@ qtests_s390x = \
    'drive_del-test',
    'device-plug-test',
    'virtio-ccw-test',
-   'cpu-plug-test',
-   'migration-test']
+   'cpu-plug-test']
 
 qos_test_ss = ss.source_set()
 qos_test_ss.add(
@@ -351,6 +348,41 @@ foreach dir : target_dirs
     qtest_env.set('QTEST_QEMU_STORAGE_DAEMON_BINARY', './storage-daemon/qemu-storage-daemon')
     test_deps += [qsd]
   endif
+
+  migtest = 'migration-test'
+  test_ss = ss.source_set()
+  test_ss.add(qtests[migtest])
+  src = [migtest + '.c'] + test_ss.all_sources()
+  deps = [qemuutil, qos] + test_ss.all_dependencies()
+  migration_test_exec = executable(migtest, src, dependencies: deps)
+
+  cc = meson.get_compiler('c')
+  migration_tests = cc.run(meson.current_source_dir() / 'migration-test.c', dependencies: deps)
+  message('aaaaaa')
+  message(migration_tests.stdout())
+
+
+#  migration_test_cmd = meson.current_build_dir() / migtest
+#  migration_tests = run_command([files(migration_test_cmd), '-l'],
+#                                env: qtest_env,
+#                                check: true).stdout().strip().split('\n')
+
+
+  foreach test : migration_tests.stdout().strip().split('\n')
+    message(test)
+    if not qtest_executables.has_key(test)
+      qtest_executables += { test: migration_test_exec }
+    endif
+    test('qtest-@0@/@1@'.format(target_base, test),
+         migration_test_exec,
+         depends: [test_deps, qtest_emulator, emulator_modules],
+         env: qtest_env,
+         args: ['-p', test],
+         protocol: 'tap',
+         timeout: slow_qtests.get(migtest),
+         priority: slow_qtests.get(migtest),
+         suite: ['qtest', 'migration-' + target_base])
+  endforeach
 
   foreach test : target_qtests
     # Executables are shared across targets, declare them only the first time we
