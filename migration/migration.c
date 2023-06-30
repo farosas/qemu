@@ -20,6 +20,7 @@
 #include "migration/blocker.h"
 #include "exec.h"
 #include "fd.h"
+#include "file.h"
 #include "socket.h"
 #include "sysemu/runstate.h"
 #include "sysemu/sysemu.h"
@@ -531,6 +532,8 @@ static void qemu_start_incoming_migration(const char *uri, bool has_channels,
  #endif
     } else if (addr->transport == MIGRATION_ADDRESS_TYPE_EXEC) {
         exec_start_incoming_migration(addr->u.exec.args, errp);
+    } else if (strstart(uri, "file:", &p)) {
+        file_start_incoming_migration(p, errp);
     } else {
         error_setg(errp, "unknown migration protocol: %s", uri);
     }
@@ -1802,6 +1805,8 @@ void qmp_migrate(const char *uri, bool has_channels,
 #endif
     } else if (addr->transport == MIGRATION_ADDRESS_TYPE_EXEC) {
         exec_start_outgoing_migration(s, addr->u.exec.args, &local_err);
+    } else if (strstart(uri, "file:", &p)) {
+        file_start_outgoing_migration(s, p, &local_err);
     } else {
         if (!resume_requested) {
             yank_unregister_instance(MIGRATION_YANK_INSTANCE);
