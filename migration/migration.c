@@ -106,6 +106,11 @@ static bool migration_needs_multiple_sockets(void)
     return migrate_multifd() || migrate_postcopy_preempt();
 }
 
+static bool migration_needs_seekable_channel(void)
+{
+    return false;
+}
+
 static bool transport_supports_multi_channels(SocketAddress *saddr)
 {
     return saddr->type == SOCKET_ADDRESS_TYPE_INET ||
@@ -113,18 +118,31 @@ static bool transport_supports_multi_channels(SocketAddress *saddr)
            saddr->type == SOCKET_ADDRESS_TYPE_VSOCK;
 }
 
+static bool transport_supports_seeking(MigrationAddress *addr)
+{
+    return addr->transport == MIGRATION_ADDRESS_TYPE_FILE;
+}
+
 static bool
 migration_channels_and_transport_compatible(MigrationAddress *addr,
                                             Error **errp)
 {
+    bool compatible = true;
+
+    if (migration_needs_seekable_channel() &&
+        !transport_supports_seeking(addr)) {
+        error_setg(errp, "Migration requires seekable transport (e.g. file)");
+        compatible = false;
+    }
+
     if (migration_needs_multiple_sockets() &&
         (addr->transport == MIGRATION_ADDRESS_TYPE_SOCKET) &&
         !transport_supports_multi_channels(&addr->u.socket)) {
         error_setg(errp, "Migration requires multi-channel URIs (e.g. tcp)");
-        return false;
+        compatible = false;
     }
 
-    return true;
+    return compatible;
 }
 
 static bool migration_should_pause(MigrationAddress *addr)
