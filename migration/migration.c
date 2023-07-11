@@ -127,7 +127,7 @@ migration_channels_and_transport_compatible(MigrationAddress *addr,
     return true;
 }
 
-static bool migration_should_pause(const char *uri)
+static bool migration_should_pause(MigrationAddress *addr)
 {
     if (!migrate_auto_pause()) {
         return false;
@@ -137,6 +137,10 @@ static bool migration_should_pause(const char *uri)
      * Return true for migration schemes that benefit from a nonlive
      * migration.
      */
+
+    if (addr->transport == MIGRATION_ADDRESS_TYPE_FILE) {
+        return true;
+    }
 
     return false;
 }
@@ -1820,7 +1824,7 @@ void qmp_migrate(const char *uri, bool has_channels,
         }
     }
 
-    if (migration_should_pause(uri)) {
+    if (migration_should_pause(addr)) {
         global_state_store();
         vm_stop_force_state(RUN_STATE_PAUSED);
     }
