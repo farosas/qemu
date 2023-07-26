@@ -1489,10 +1489,25 @@
 #
 # @rdma: Migrate via RDMA.
 #
+# @file: Direct the migration stream to a file.
+#
 # Since 8.2
 ##
 { 'enum': 'MigrationAddressType',
-  'data': ['socket', 'exec', 'rdma'] }
+  'data': ['socket', 'exec', 'rdma', 'file'] }
+
+##
+# @FileMigrationArgs:
+#
+# @path: file path
+#
+# @offset: initial offset for the file
+#
+# Since 8.2
+##
+{ 'struct': 'FileMigrationArgs',
+  'data': {'path': 'str',
+           'offset': 'uint64' } }
 
 ##
 # @MigrationExecCommand:
@@ -1517,7 +1532,8 @@
   'data': {
     'socket': 'SocketAddress',
     'exec': 'MigrationExecCommand',
-    'rdma': 'InetSocketAddress' } }
+    'rdma': 'InetSocketAddress',
+    'file': 'FileMigrationArgs' } }
 
 ##
 # @MigrationChannelType:
