@@ -429,9 +429,8 @@ void migrate_add_address(SocketAddress *address)
                       QAPI_CLONE(SocketAddress, address));
 }
 
-static bool migrate_uri_parse(const char *uri,
-                              MigrationChannel **channel,
-                              Error **errp)
+bool migrate_uri_parse(const char *uri, MigrationChannel **channel,
+                       Error **errp)
 {
     MigrationChannel *val = g_new0(MigrationChannel, 1);
     MigrationAddress *addr = g_new0(MigrationAddress, 1);
