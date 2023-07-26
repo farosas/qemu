@@ -111,30 +111,39 @@ static bool migration_needs_seekable_channel(void)
     return migrate_fixed_ram();
 }
 
-static bool uri_supports_multi_channels(const char *uri)
+static bool transport_supports_seeking(MigrationAddress *addr)
 {
-    return strstart(uri, "tcp:", NULL) || strstart(uri, "unix:", NULL) ||
-           strstart(uri, "vsock:", NULL) || strstart(uri, "file:", NULL);
+    return addr->transport == MIGRATION_ADDRESS_TYPE_FILE;
 }
 
-static bool uri_supports_seeking(const char *uri)
+static bool transport_supports_multi_channels(MigrationAddress *addr)
 {
-    return strstart(uri, "file:", NULL);
+    if (addr->transport == MIGRATION_ADDRESS_TYPE_SOCKET) {
+        SocketAddressType type = addr->u.socket.type;
+
+        return (type == SOCKET_ADDRESS_TYPE_INET ||
+                type == SOCKET_ADDRESS_TYPE_UNIX ||
+                type == SOCKET_ADDRESS_TYPE_VSOCK);
+    } else if (addr->transport == MIGRATION_ADDRESS_TYPE_FILE) {
+        return true;
+    }
+    return false;
 }
 
 static bool
-migration_channels_and_uri_compatible(const char *uri, Error **errp)
+migration_channels_and_transport_compatible(MigrationAddress *addr,
+                                            Error **errp)
 {
     bool compatible = true;
 
     if (migration_needs_seekable_channel() &&
-        !uri_supports_seeking(uri)) {
+        !transport_supports_seeking(addr)) {
         error_setg(errp, "Migration requires seekable transport (e.g. file)");
         compatible = false;
     }
 
     if (migration_needs_multiple_sockets() &&
-        !uri_supports_multi_channels(uri)) {
+        !transport_supports_multi_channels(addr)) {
         error_setg(errp, "Migration requires multi-channel URIs (e.g. tcp)");
         compatible = false;
     }
@@ -544,8 +553,7 @@ static void qemu_start_incoming_migration(const char *uri, bool has_channels,
         return;
     }
 
-    /* URI is not suitable for migration? */
-    if (!migration_channels_and_uri_compatible(uri, errp)) {
+    if (uri && !migrate_uri_parse(uri, &channel, errp)) {
         return;
     }
 
@@ -554,7 +562,8 @@ static void qemu_start_incoming_migration(const char *uri, bool has_channels,
 
     qapi_event_send_migration(MIGRATION_STATUS_SETUP);
 
-    if (uri && !migrate_uri_parse(uri, &channel, errp)) {
+    /* transport mechanism not suitable for migration? */
+    if (!migration_channels_and_transport_compatible(channel, errp)) {
         return;
     }
 
@@ -1808,12 +1817,12 @@ void qmp_migrate(const char *uri, bool has_channels,
         return;
     }
 
-    /* URI is not suitable for migration? */
-    if (!migration_channels_and_uri_compatible(uri, errp)) {
+    if (!migrate_uri_parse(uri, &channel, errp)) {
         return;
     }
 
-    if (!migrate_uri_parse(uri, &channel, errp)) {
+    /* transport mechanism not suitable for migration? */
+    if (!migration_channels_and_transport_compatible(channel, errp)) {
         return;
     }
 
