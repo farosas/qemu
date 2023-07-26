@@ -17,4 +17,5 @@ void file_start_outgoing_migration(MigrationState *s, const char *filespec,
                                    Error **errp);
 void file_send_channel_create(QIOTaskFunc f, void *data);
 int file_send_channel_destroy(QIOChannel *ioc);
+int file_parse_offset(char *filespec, uint64_t *offsetp, Error **errp);
 #endif
