@@ -704,7 +704,6 @@ static int test_migrate_start(QTestState **from, QTestState **to,
     g_autofree gchar *arch_target = NULL;
     g_autofree gchar *cmd_source = NULL;
     g_autofree gchar *cmd_target = NULL;
-    const gchar *ignore_stderr;
     g_autofree char *bootpath = NULL;
     g_autofree char *shmem_opts = NULL;
     g_autofree char *shmem_path = NULL;
@@ -765,21 +764,6 @@ static int test_migrate_start(QTestState **from, QTestState **to,
         g_assert_not_reached();
     }
 
-    if (!getenv("QTEST_LOG") && args->hide_stderr) {
-#ifndef _WIN32
-        ignore_stderr = "2>/dev/null";
-#else
-        /*
-         * On Windows the QEMU executable is created via CreateProcess() and
-         * IO redirection does not work, so don't bother adding IO redirection
-         * to the command line.
-         */
-        ignore_stderr = "";
-#endif
-    } else {
-        ignore_stderr = "";
-    }
-
     if (args->use_shmem) {
         shmem_path = g_strdup_printf("/dev/shm/qemu-%d", getpid());
         shmem_opts = g_strdup_printf(
@@ -795,15 +779,15 @@ static int test_migrate_start(QTestState **from, QTestState **to,
                                  "-name source,debug-threads=on "
                                  "-m %s "
                                  "-serial file:%s/src_serial "
-                                 "%s %s %s %s",
+                                 "%s %s %s",
                                  args->use_dirty_ring ?
                                  ",dirty-ring-size=4096" : "",
                                  machine_opts ? " -machine " : "",
                                  machine_opts ? machine_opts : "",
                                  memory_size, tmpfs,
                                  arch_source, shmem_opts,
-                                 args->opts_source ? args->opts_source : "",
-                                 ignore_stderr);
+                                 args->opts_source ? args->opts_source : "-trace postcopy_pause* -trace open_return_path*");
+//                                 args->opts_source ? args->opts_source : "-trace postcopy_pause* -trace open_return_path* -trace migration_return_path* -trace await_return_path* -trace source_return_path* -trace migrate_set_state");
     if (!args->only_target) {
         *from = qtest_init(cmd_source);
         qtest_qmp_set_event_callback(*from,
@@ -816,15 +800,15 @@ static int test_migrate_start(QTestState **from, QTestState **to,
                                  "-m %s "
                                  "-serial file:%s/dest_serial "
                                  "-incoming %s "
-                                 "%s %s %s %s",
+                                 "%s %s %s",
                                  args->use_dirty_ring ?
                                  ",dirty-ring-size=4096" : "",
                                  machine_opts ? " -machine " : "",
                                  machine_opts ? machine_opts : "",
                                  memory_size, tmpfs, uri,
                                  arch_target, shmem_opts,
-                                 args->opts_target ? args->opts_target : "",
-                                 ignore_stderr);
+                                 args->opts_target ? args->opts_target : "-trace postcopy_pause* -trace open_return_path*");
+//                                 args->opts_target ? args->opts_target : "-trace postcopy_pause* -trace open_return_path* -trace migration_return_path* -trace await_return_path* -trace source_return_path* -trace migrate_set_state");
     *to = qtest_init(cmd_target);
     qtest_qmp_set_event_callback(*to,
                                  migrate_watch_for_resume,

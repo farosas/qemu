@@ -2715,7 +2715,7 @@ static bool postcopy_pause_incoming(MigrationIncomingState *mis)
         postcopy_temp_page_reset(&mis->postcopy_tmp_pages[i]);
     }
 
-    error_report("Detected IO failure for postcopy. "
+    error_report("Detected incoming IO failure for postcopy. "
                  "Migration paused.");
 
     while (mis->state == MIGRATION_STATUS_POSTCOPY_PAUSED) {

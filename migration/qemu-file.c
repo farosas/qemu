@@ -87,16 +87,16 @@ int qemu_file_shutdown(QEMUFile *f)
      *      --> guest crash!
      */
     if (!f->last_error) {
-        qemu_file_set_error(f, -EIO);
+        qemu_file_set_error(f, -11);
     }
 
     if (!qio_channel_has_feature(f->ioc,
                                  QIO_CHANNEL_FEATURE_SHUTDOWN)) {
-        return -ENOSYS;
+        return -12;
     }
 
     if (qio_channel_shutdown(f->ioc, QIO_CHANNEL_SHUTDOWN_BOTH, NULL) < 0) {
-        ret = -EIO;
+        ret = -13;
     }
 
     return ret;
@@ -289,7 +289,7 @@ void qemu_fflush(QEMUFile *f)
         if (qio_channel_writev_all(f->ioc,
                                    f->iov, f->iovcnt,
                                    &local_error) < 0) {
-            qemu_file_set_error_obj(f, -EIO, local_error);
+            qemu_file_set_error_obj(f, -14, local_error);
         } else {
             uint64_t size = iov_size(f->iov, f->iovcnt);
             f->total_transferred += size;
@@ -398,7 +398,8 @@ static ssize_t coroutine_mixed_fn qemu_fill_buffer(QEMUFile *f)
                 qio_channel_wait(f->ioc, G_IO_IN);
             }
         } else if (len < 0) {
-            len = -EIO;
+            len = -15;
+            printf("errno: %d\n", errno);
         }
     } while (len == QIO_CHANNEL_ERR_BLOCK);
 
@@ -406,7 +407,7 @@ static ssize_t coroutine_mixed_fn qemu_fill_buffer(QEMUFile *f)
         f->buf_size += len;
         f->total_transferred += len;
     } else if (len == 0) {
-        qemu_file_set_error_obj(f, -EIO, local_error);
+        qemu_file_set_error_obj(f, -16, local_error);
     } else {
         qemu_file_set_error_obj(f, len, local_error);
     }
@@ -905,7 +906,7 @@ int qemu_file_get_to_fd(QEMUFile *f, int fd, size_t size)
                 return rc;
             }
             if (rc == 0) {
-                return -EIO;
+                return -17;
             }
             continue;
         }
@@ -915,7 +916,7 @@ int qemu_file_get_to_fd(QEMUFile *f, int fd, size_t size)
             return -errno;
         }
         if (rc == 0) {
-            return -EIO;
+            return -18;
         }
         f->buf_index += rc;
         size -= rc;

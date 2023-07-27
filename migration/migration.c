@@ -97,6 +97,7 @@ static int migration_maybe_pause(MigrationState *s,
                                  int *current_active_state,
                                  int new_state);
 static void migrate_fd_cancel(MigrationState *s);
+static int await_return_path_close_on_source(MigrationState *ms);
 
 static bool migration_needs_multiple_sockets(void)
 {
@@ -291,7 +292,7 @@ static int migrate_send_rp_message(MigrationIncomingState *mis,
      * failures.
      */
     if (!mis->to_src_file) {
-        ret = -EIO;
+        ret = -10;
         return ret;
     }
 
@@ -1237,6 +1238,7 @@ static void migrate_fd_cancel(MigrationState *s)
 
     WITH_QEMU_LOCK_GUARD(&s->qemu_file_lock) {
         if (s->rp_state.from_dst_file) {
+            printf("SHUTDOWN\n");
             /* shutdown the rp socket, so causing the rp thread to shutdown */
             qemu_file_shutdown(s->rp_state.from_dst_file);
         }
@@ -1764,18 +1766,6 @@ static void migrate_handle_rp_req_pages(MigrationState *ms, const char* rbname,
     }
 }
 
-/* Return true to retry, false to quit */
-static bool postcopy_pause_return_path_thread(MigrationState *s)
-{
-    trace_postcopy_pause_return_path();
-
-    qemu_sem_wait(&s->postcopy_pause_rp_sem);
-
-    trace_postcopy_pause_return_path_continued();
-
-    return true;
-}
-
 static int migrate_handle_rp_recv_bitmap(MigrationState *s, char *block_name)
 {
     RAMBlock *block = qemu_ram_block_by_name(block_name);
@@ -1859,7 +1849,6 @@ static void *source_return_path_thread(void *opaque)
     trace_source_return_path_thread_entry();
     rcu_register_thread();
 
-retry:
     while (!ms->rp_state.error && !qemu_file_get_error(rp) &&
            migration_is_setup_or_active(ms->state)) {
         trace_source_return_path_thread_loop_top();
@@ -1983,26 +1972,17 @@ retry:
 out:
     res = qemu_file_get_error(rp);
     if (res) {
-        if (res && migration_in_postcopy()) {
+        if (migration_in_postcopy()) {
             /*
              * Maybe there is something we can do: it looks like a
-             * network down issue, and we pause for a recovery.
+             * network down issue. The main thread will detect the
+             * error, pause the migration and try again.
              */
-            migration_release_dst_files(ms);
-            rp = NULL;
-            if (postcopy_pause_return_path_thread(ms)) {
-                /*
-                 * Reload rp, reset the rest.  Referencing it is safe since
-                 * it's reset only by us above, or when migration completes
-                 */
-                rp = ms->rp_state.from_dst_file;
-                ms->rp_state.error = false;
-                goto retry;
-            }
+            printf("%d\n", res);
+            ms->rp_state.error = false;
+        } else {
+            mark_source_rp_bad(ms);
         }
-
-        trace_source_return_path_thread_bad_end();
-        mark_source_rp_bad(ms);
     }
 
     trace_source_return_path_thread_end();
@@ -2011,19 +1991,30 @@ out:
     return NULL;
 }
 
-static int open_return_path_on_source(MigrationState *ms,
-                                      bool create_thread)
+static int open_return_path_on_source(MigrationState *ms)
 {
+    trace_open_return_path_on_source();
+
+    /*
+     * We're resuming from a paused migration. Wait for the return
+     * path thread to finish and start again.
+     */
+    if (ms->rp_state.rp_thread_created) {
+        int rp_error;
+
+        assert(ms->state == MIGRATION_STATUS_POSTCOPY_PAUSED);
+
+        trace_migration_return_path_end_before();
+        rp_error = await_return_path_close_on_source(ms);
+        trace_migration_return_path_end_after(rp_error);
+        if (rp_error) {
+            return -1;
+        }
+    }
+
     ms->rp_state.from_dst_file = qemu_file_get_return_path(ms->to_dst_file);
     if (!ms->rp_state.from_dst_file) {
         return -1;
-    }
-
-    trace_open_return_path_on_source();
-
-    if (!create_thread) {
-        /* We're done */
-        return 0;
     }
 
     qemu_thread_create(&ms->rp_state.rp_thread, "return path",
@@ -2563,11 +2554,11 @@ static MigThrError postcopy_pause(MigrationState *s)
              * return path channel.
              */
             qemu_sem_post(&s->postcopy_pause_rp_sem);
+            trace_postcopy_pause_continued();
 
             /* Do the resume logic */
             if (postcopy_do_resume(s) == 0) {
                 /* Let's continue! */
-                trace_postcopy_pause_continued();
                 return MIG_THR_ERR_RECOVERED;
             } else {
                 /*
@@ -3251,7 +3242,7 @@ void migrate_fd_connect(MigrationState *s, Error *error_in)
      * QEMU uses the return path.
      */
     if (migrate_postcopy_ram() || migrate_return_path()) {
-        if (open_return_path_on_source(s, !resume)) {
+        if (open_return_path_on_source(s)) {
             error_report("Unable to open return-path for postcopy");
             migrate_set_state(&s->state, s->state, MIGRATION_STATUS_FAILED);
             migrate_fd_cleanup(s);
