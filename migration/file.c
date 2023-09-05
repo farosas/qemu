@@ -100,21 +100,17 @@ void file_send_channel_create(QIOTaskFunc f, void *data)
                            (gpointer)data, NULL, NULL);
 }
 
-void file_start_outgoing_migration(MigrationState *s, const char *filespec,
+void file_start_outgoing_migration(MigrationState *s, FileMigrationArgs *file_args,
                                    Error **errp)
 {
     g_autoptr(QIOChannelFile) fioc = NULL;
-    g_autofree char *filename = g_strdup(filespec);
-    uint64_t offset = 0;
+    g_autofree char *filename = g_strdup(file_args->path);
+    uint64_t offset = file_args->offset;
     QIOChannel *ioc;
     int flags = O_CREAT | O_TRUNC | O_WRONLY;
     mode_t mode = 0660;
 
     trace_migration_file_outgoing(filename);
-
-    if (file_parse_offset(filename, &offset, errp)) {
-        return;
-    }
 
     fioc = qio_channel_file_new_path(filename, flags, mode, errp);
     if (!fioc) {
@@ -142,19 +138,15 @@ static gboolean file_accept_incoming_migration(QIOChannel *ioc,
     return G_SOURCE_REMOVE;
 }
 
-void file_start_incoming_migration(const char *filespec, Error **errp)
+void file_start_incoming_migration(FileMigrationArgs *file_args, Error **errp)
 {
-    g_autofree char *filename = g_strdup(filespec);
+    g_autofree char *filename = g_strdup(file_args->path);
     QIOChannelFile *fioc = NULL;
-    uint64_t offset = 0;
+    uint64_t offset = file_args->offset;
     int channels = 1;
     int i = 0, fd;
 
     trace_migration_file_incoming(filename);
-
-    if (file_parse_offset(filename, &offset, errp)) {
-        return;
-    }
 
     fioc = qio_channel_file_new_path(filename, O_RDONLY, 0, errp);
     if (!fioc) {

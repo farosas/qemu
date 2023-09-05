@@ -551,7 +551,7 @@ static void qemu_start_incoming_migration(const char *uri, Error **errp)
     } else if (channel->transport == MIGRATION_ADDRESS_TYPE_EXEC) {
         exec_start_incoming_migration(channel->u.exec.args, errp);
     } else if (strstart(uri, "file:", &p)) {
-        file_start_incoming_migration(p, errp);
+        file_start_incoming_migration(&channel->u.file, errp);
     } else {
         error_setg(errp, "unknown migration protocol: %s", uri);
     }
@@ -1760,7 +1760,6 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
     bool resume_requested;
     Error *local_err = NULL;
     MigrationState *s = migrate_get_current();
-    const char *p = NULL;
     g_autoptr(MigrationAddress) channel = NULL;
 
     /* URI is not suitable for migration? */
@@ -1805,8 +1804,8 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
 #endif
     } else if (channel->transport == MIGRATION_ADDRESS_TYPE_EXEC) {
         exec_start_outgoing_migration(s, channel->u.exec.args, &local_err);
-    } else if (strstart(uri, "file:", &p)) {
-        file_start_outgoing_migration(s, p, &local_err);
+    } else if (channel->transport == MIGRATION_ADDRESS_TYPE_FILE) {
+        file_start_outgoing_migration(s, &channel->u.file, &local_err);
     } else {
         if (!resume_requested) {
             yank_unregister_instance(MIGRATION_YANK_INSTANCE);

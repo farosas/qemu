@@ -10,10 +10,11 @@
 
 #include "io/task.h"
 #include "channel.h"
+#include "qapi/qapi-types-migration.h"
 
-void file_start_incoming_migration(const char *filespec, Error **errp);
+void file_start_incoming_migration(FileMigrationArgs *file_args, Error **errp);
 
-void file_start_outgoing_migration(MigrationState *s, const char *filespec,
+void file_start_outgoing_migration(MigrationState *s, FileMigrationArgs *file_args,
                                    Error **errp);
 void file_send_channel_create(QIOTaskFunc f, void *data);
 int file_send_channel_destroy(QIOChannel *ioc);
