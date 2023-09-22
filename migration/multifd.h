@@ -41,8 +41,8 @@ typedef struct {
     uint32_t magic;
     uint32_t version;
     uint32_t flags;
-    /* maximum number of allocated pages */
-    uint32_t pages_alloc;
+    /* maximum number of pages that fit this packet */
+    uint32_t max_pages;
     /* non zero pages */
     uint32_t normal_pages;
     /* size of the next packet that contains pages */

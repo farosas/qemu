@@ -262,8 +262,7 @@ static void multifd_send_fill_packet(MultiFDSendParams *p)
     int i;
 
     packet->flags = cpu_to_be32(p->flags);
-    packet->pages_alloc = cpu_to_be32(MULTIFD_PACKET_SIZE /
-                                      p->pages->page_size);
+    packet->max_pages = cpu_to_be32(MULTIFD_PACKET_SIZE / p->pages->page_size);
     packet->normal_pages = cpu_to_be32(p->pages->num);
     packet->next_packet_size = cpu_to_be32(p->next_packet_size);
     packet->packet_num = cpu_to_be64(p->packet_num);
@@ -303,23 +302,23 @@ static int multifd_recv_unfill_packet(MultiFDRecvParams *p, Error **errp)
 
     p->flags = be32_to_cpu(packet->flags);
 
-    packet->pages_alloc = be32_to_cpu(packet->pages_alloc);
+    packet->max_pages = be32_to_cpu(packet->max_pages);
     /*
      * If we received a packet that is 100 times bigger than expected
      * just stop migration.  It is a magic number.
      */
-    if (packet->pages_alloc > p->page_count) {
+    if (packet->max_pages > p->page_count) {
         error_setg(errp, "multifd: received packet "
                    "with size %u and expected a size of %u",
-                   packet->pages_alloc, p->page_count) ;
+                   packet->max_pages, p->page_count) ;
         return -1;
     }
 
     p->normal_num = be32_to_cpu(packet->normal_pages);
-    if (p->normal_num > packet->pages_alloc) {
+    if (p->normal_num > packet->max_pages) {
         error_setg(errp, "multifd: received packet "
                    "with %u pages and expected maximum pages are %u",
-                   p->normal_num, packet->pages_alloc) ;
+                   p->normal_num, packet->max_pages) ;
         return -1;
     }
 
