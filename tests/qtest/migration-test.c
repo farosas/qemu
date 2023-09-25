@@ -45,6 +45,7 @@ unsigned end_address;
 static bool uffd_feature_thread_id;
 static bool got_src_stop;
 static bool got_dst_resume;
+static char *common_machine_type;
 
 /*
  * An initial 3 MB offset is used as that corresponds
@@ -712,6 +713,7 @@ static int test_migrate_start(QTestState **from, QTestState **to,
     g_autofree char *shmem_path = NULL;
     const char *arch = qtest_get_arch();
     const char *memory_size;
+    g_autofree char *machine = NULL;
 
     if (args->use_shmem) {
         if (!g_file_test("/dev/shm", G_FILE_TEST_IS_DIR)) {
@@ -723,18 +725,30 @@ static int test_migrate_start(QTestState **from, QTestState **to,
     got_src_stop = false;
     got_dst_resume = false;
     bootpath = g_strdup_printf("%s/bootsect", tmpfs);
+
     if (strcmp(arch, "i386") == 0 || strcmp(arch, "x86_64") == 0) {
         /* the assembled x86 boot sector should be exactly one sector large */
         assert(sizeof(x86_bootsect) == 512);
         init_bootfile(bootpath, x86_bootsect, sizeof(x86_bootsect));
         memory_size = "150M";
-        arch_opts = g_strdup_printf("-drive file=%s,format=raw", bootpath);
+
+        if (common_machine_type) {
+            machine = g_strdup_printf("-machine %s", common_machine_type);
+        }
+
+        arch_opts = g_strdup_printf("%s -drive file=%s,format=raw",
+                                    machine, bootpath);
         start_address = X86_TEST_MEM_START;
         end_address = X86_TEST_MEM_END;
     } else if (g_str_equal(arch, "s390x")) {
         init_bootfile(bootpath, s390x_elf, sizeof(s390x_elf));
         memory_size = "128M";
-        arch_opts = g_strdup_printf("-bios %s", bootpath);
+
+        if (common_machine_type) {
+            machine = g_strdup_printf("-machine %s", common_machine_type);
+        }
+
+        arch_opts = g_strdup_printf("%s -bios %s", machine, bootpath);
         start_address = S390_TEST_MEM_START;
         end_address = S390_TEST_MEM_END;
     } else if (strcmp(arch, "ppc64") == 0) {
@@ -745,12 +759,24 @@ static int test_migrate_start(QTestState **from, QTestState **to,
                                       "'nvramrc=hex .\" _\" begin %x %x "
                                       "do i c@ 1 + i c! 1000 +loop .\" B\" 0 "
                                       "until'", end_address, start_address);
-        arch_opts = g_strdup("-nodefaults -machine vsmt=8");
+
+        if (common_machine_type) {
+            machine = g_strdup_printf("%s,", common_machine_type);
+        }
+
+        arch_opts = g_strdup_printf("-nodefaults -machine %svsmt=8", machine);
     } else if (strcmp(arch, "aarch64") == 0) {
         init_bootfile(bootpath, aarch64_kernel, sizeof(aarch64_kernel));
         memory_size = "150M";
-        arch_opts = g_strdup_printf("-machine virt,gic-version=max -cpu max "
-                                    "-kernel %s", bootpath);
+
+        if (common_machine_type) {
+            machine = g_strdup_printf("%s", common_machine_type);
+        } else {
+            machine = g_strdup("virt");
+        }
+
+        arch_opts = g_strdup_printf("-machine %s,gic-version=max -cpu max "
+                                    "-kernel %s", machine, bootpath);
         start_address = ARM_TEST_MEM_START;
         end_address = ARM_TEST_MEM_END;
 
@@ -799,7 +825,7 @@ static int test_migrate_start(QTestState **from, QTestState **to,
                                  args->opts_source ? args->opts_source : "",
                                  ignore_stderr);
     if (!args->only_target) {
-        *from = qtest_init(cmd_source);
+        *from = mig_init_src(cmd_source);
         qtest_qmp_set_event_callback(*from,
                                      migrate_watch_for_stop,
                                      &got_src_stop);
@@ -819,7 +845,7 @@ static int test_migrate_start(QTestState **from, QTestState **to,
                                  shmem_opts,
                                  args->opts_target ? args->opts_target : "",
                                  ignore_stderr);
-    *to = qtest_init(cmd_target);
+    *to = mig_init_dst(cmd_target);
     qtest_qmp_set_event_callback(*to,
                                  migrate_watch_for_resume,
                                  &got_dst_resume);
@@ -2769,6 +2795,8 @@ int main(int argc, char **argv)
     const char *arch;
     g_autoptr(GError) err = NULL;
     int ret;
+    const char *qemu_src = getenv("QTEST_QEMU_SRC");
+    const char *qemu_dst = getenv("QTEST_QEMU_DST");
 
     g_test_init(&argc, &argv, NULL);
 
@@ -2778,6 +2806,16 @@ int main(int argc, char **argv)
     if (!has_tcg && !has_kvm) {
         g_test_skip("No KVM or TCG accelerator available");
         return 0;
+    }
+
+    if (qemu_src || qemu_dst) {
+        if (qemu_src && qemu_dst) {
+            g_test_message("Only one of QTEST_QEMU_SRC, QTEST_QEMU_DST is allowed.");
+            exit(1);
+        }
+        common_machine_type = find_common_machine_type(qemu_src ? qemu_src : qemu_dst);
+        g_test_message("Using two different QEMU binaries. Common machine type: %s",
+                       common_machine_type);
     }
 
     has_uffd = ufd_version_check();

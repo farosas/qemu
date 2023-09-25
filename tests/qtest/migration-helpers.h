@@ -33,4 +33,7 @@ void wait_for_migration_complete(QTestState *who);
 
 void wait_for_migration_fail(QTestState *from, bool allow_active);
 
+QTestState *mig_init_src(const char *extra_args);
+QTestState *mig_init_dst(const char *extra_args);
+char *find_common_machine_type(const char *bin);
 #endif /* MIGRATION_HELPERS_H */

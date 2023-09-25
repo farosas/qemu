@@ -12,6 +12,8 @@
 
 #include "qemu/osdep.h"
 #include "qapi/qmp/qjson.h"
+#include "qapi/qmp/qlist.h"
+#include "qapi/qmp/qstring.h"
 
 #include "migration-helpers.h"
 
@@ -179,4 +181,170 @@ void wait_for_migration_fail(QTestState *from, bool allow_active)
     g_assert(qdict_haskey(rsp_return, "running"));
     g_assert(qdict_get_bool(rsp_return, "running"));
     qobject_unref(rsp_return);
+}
+
+static char *query_pkg_version(QTestState *who)
+{
+    QDict *rsp;
+    char *pkg;
+
+    rsp = qtest_qmp_assert_success_ref(who, "{ 'execute': 'query-version' }");
+    g_assert(rsp);
+
+    pkg = g_strdup(qdict_get_str(rsp, "package"));
+    qobject_unref(rsp);
+
+    return pkg;
+}
+
+static QList *query_machines(void)
+{
+    QDict *response;
+    QList *list;
+    QTestState *qts;
+
+    qts = qtest_init("-machine none");
+    response = qtest_qmp(qts, "{ 'execute': 'query-machines' }");
+    g_assert(response);
+    list = qdict_get_qlist(response, "return");
+    g_assert(list);
+
+    qtest_quit(qts);
+    return list;
+}
+
+static char *get_default_machine(QList *list)
+{
+    QDict *info;
+    QListEntry *entry;
+    QString *qstr;
+    char *name = NULL;
+
+    QLIST_FOREACH_ENTRY(list, entry) {
+        info = qobject_to(QDict, qlist_entry_obj(entry));
+        g_assert(info);
+
+        if (qdict_get(info, "is-default")) {
+            qstr = qobject_to(QString, qdict_get(info, "name"));
+            g_assert(qstr);
+            name = g_strdup(qstring_get_str(qstr));
+            break;
+        }
+    }
+
+    g_assert(name);
+    return name;
+}
+
+static bool search_default_machine(QList *list, const char *theirs)
+{
+    QDict *info;
+    QListEntry *entry;
+    QString *qstr;
+
+    if (!theirs) {
+        return false;
+    }
+
+    QLIST_FOREACH_ENTRY(list, entry) {
+        info = qobject_to(QDict, qlist_entry_obj(entry));
+        g_assert(info);
+
+        qstr = qobject_to(QString, qdict_get(info, "name"));
+        g_assert(qstr);
+
+        if (g_str_equal(qstring_get_str(qstr), theirs)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * We need to ensure that both QEMU instances set via the QTEST_QEMU_*
+ * vars will use the same machine type. Use a custom query_machines
+ * function because the generic one in libqtest has a cache that would
+ * return the same machines for both binaries.
+ */
+char *find_common_machine_type(const char *bin)
+{
+    QList *m1, *m2;
+    g_autofree char *def1 = NULL;
+    g_autofree char *def2 = NULL;
+    const char *qemu_bin = getenv("QTEST_QEMU_BINARY");
+
+    m1 = query_machines();
+
+    g_setenv("QTEST_QEMU_BINARY", bin, true);
+    m2 = query_machines();
+    g_setenv("QTEST_QEMU_BINARY", qemu_bin, true);
+
+    def1 = get_default_machine(m1);
+    def2 = get_default_machine(m2);
+
+    if (g_str_equal(def1, def2)) {
+        /* either can be used */
+        return g_strdup(def1);
+    }
+
+    if (search_default_machine(m1, def2)) {
+        return g_strdup(def2);
+    }
+
+    if (search_default_machine(m2, def1)) {
+        return g_strdup(def1);
+    }
+
+    g_assert_not_reached();
+}
+
+/*
+ * Init a guest for migration tests using an alternate QEMU binary for
+ * either the source or destination, depending on @var. The other
+ * binary should be set as usual via QTEST_QEMU_BINARY.
+ *
+ * Expected values:
+ *   QTEST_QEMU_SRC
+ *   QTEST_QEMU_DST
+ *
+ * Warning: The generic parts of qtest could be using
+ * QTEST_QEMU_BINARY to query for properties before we reach the
+ * migration code. If the alternate binary is too dissimilar that
+ * could cause issues.
+ */
+static QTestState *init_vm(const char *extra_args, const char *var)
+{
+    const char *alt_bin = getenv(var);
+    const char *qemu_bin = getenv("QTEST_QEMU_BINARY");
+    g_autofree char *pkg = NULL;
+    bool src = !!strstr(var, "SRC");
+    QTestState *qts;
+
+    if (alt_bin) {
+        g_setenv("QTEST_QEMU_BINARY", alt_bin, true);
+    }
+
+    qts = qtest_init(extra_args);
+    pkg = query_pkg_version(qts);
+
+    g_test_message("Using %s (%s) as migration %s",
+                   alt_bin ? alt_bin : qemu_bin,
+                   pkg,
+                   src ? "source" : "destination");
+
+    if (alt_bin) {
+        /* restore the original */
+        g_setenv("QTEST_QEMU_BINARY", qemu_bin, true);
+    }
+    return qts;
+}
+
+QTestState *mig_init_src(const char *extra_args)
+{
+    return init_vm(extra_args, "QTEST_QEMU_SRC");
+}
+
+QTestState *mig_init_dst(const char *extra_args)
+{
+    return init_vm(extra_args, "QTEST_QEMU_DST");
 }
