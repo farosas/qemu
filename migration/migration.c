@@ -468,6 +468,13 @@ bool migrate_uri_parse(const char *uri, MigrationChannel **channel,
         }
         addr->u.socket.type = saddr->type;
         addr->u.socket.u = saddr->u;
+    } else if (strstart(uri, "file:", NULL)) {
+        addr->transport = MIGRATION_ADDRESS_TYPE_FILE;
+        addr->u.file.path = g_strdup(uri + strlen("file:"));
+        if (file_parse_offset(addr->u.file.path, &addr->u.file.offset, errp)) {
+            g_free(addr->u.file.path);
+            return false;
+        }
     } else {
         error_setg(errp, "unknown migration protocol: %s", uri);
         return false;
@@ -483,7 +490,6 @@ static void qemu_start_incoming_migration(const char *uri, bool has_channels,
                                           MigrationChannelList *channels,
                                           Error **errp)
 {
-    const char *p = NULL;
     MigrationChannel *channel = NULL;
     MigrationAddress *addr = NULL;
 
@@ -535,8 +541,8 @@ static void qemu_start_incoming_migration(const char *uri, bool has_channels,
  #endif
     } else if (addr->transport == MIGRATION_ADDRESS_TYPE_EXEC) {
         exec_start_incoming_migration(addr->u.exec.args, errp);
-    } else if (strstart(uri, "file:", &p)) {
-        file_start_incoming_migration(p, errp);
+    } else if (addr->transport == MIGRATION_ADDRESS_TYPE_FILE) {
+        file_start_incoming_migration(&addr->u.file, errp);
     } else {
         error_setg(errp, "unknown migration protocol: %s", uri);
     }
@@ -1760,7 +1766,6 @@ void qmp_migrate(const char *uri, bool has_channels,
     bool resume_requested;
     Error *local_err = NULL;
     MigrationState *s = migrate_get_current();
-    const char *p = NULL;
     MigrationChannel *channel = NULL;
     MigrationAddress *addr = NULL;
 
@@ -1824,8 +1829,8 @@ void qmp_migrate(const char *uri, bool has_channels,
 #endif
     } else if (addr->transport == MIGRATION_ADDRESS_TYPE_EXEC) {
         exec_start_outgoing_migration(s, addr->u.exec.args, &local_err);
-    } else if (strstart(uri, "file:", &p)) {
-        file_start_outgoing_migration(s, p, &local_err);
+    } else if (addr->transport == MIGRATION_ADDRESS_TYPE_FILE) {
+        file_start_outgoing_migration(s, &addr->u.file, &local_err);
     } else {
         error_setg(&local_err, QERR_INVALID_PARAMETER_VALUE, "uri",
                    "a valid migration protocol");
