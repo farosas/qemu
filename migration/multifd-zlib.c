@@ -136,8 +136,8 @@ static int zlib_send_prepare(MultiFDSendParams *p, Error **errp)
          * therefore copy the page before calling deflate().
          */
         memcpy(z->buf, p->pages->block->host + p->pages->offset[i],
-               p->page_size);
-        zs->avail_in = p->page_size;
+               p->pages->page_size);
+        zs->avail_in = p->pages->page_size;
         zs->next_in = z->buf;
 
         zs->avail_out = available;

@@ -128,7 +128,7 @@ static int zstd_send_prepare(MultiFDSendParams *p, Error **errp)
             flush = ZSTD_e_flush;
         }
         z->in.src = p->pages->block->host + p->pages->offset[i];
-        z->in.size = p->page_size;
+        z->in.size = p->pages->page_size;
         z->in.pos = 0;
 
         /*

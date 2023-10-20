@@ -58,6 +58,8 @@ typedef struct {
     uint32_t num;
     /* number of allocated pages */
     uint32_t allocated;
+    /* guest page size */
+    uint32_t page_size;
     /* offset of each page */
     ram_addr_t *offset;
     RAMBlock *block;
@@ -79,8 +81,6 @@ typedef struct {
     bool registered_yank;
     /* packet allocated len */
     uint32_t packet_len;
-    /* guest page size */
-    uint32_t page_size;
     /* number of pages in a full packet */
     uint32_t page_count;
     /* multifd flags for sending ram */

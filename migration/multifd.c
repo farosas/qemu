@@ -92,11 +92,11 @@ static int nocomp_send_prepare(MultiFDSendParams *p, Error **errp)
 
     for (int i = 0; i < pages->num; i++) {
         p->iov[p->iovs_num].iov_base = pages->block->host + pages->offset[i];
-        p->iov[p->iovs_num].iov_len = p->page_size;
+        p->iov[p->iovs_num].iov_len = pages->page_size;
         p->iovs_num++;
     }
 
-    p->next_packet_size = pages->num * p->page_size;
+    p->next_packet_size = pages->num * pages->page_size;
     p->flags |= MULTIFD_FLAG_NOCOMP;
     return 0;
 }
@@ -243,6 +243,7 @@ static MultiFDPages_t *multifd_pages_init(uint32_t n)
 
     pages->allocated = n;
     pages->offset = g_new0(ram_addr_t, n);
+    pages->page_size = qemu_target_page_size();
 
     return pages;
 }
@@ -935,7 +936,6 @@ int multifd_save_setup(Error **errp)
         p->name = g_strdup_printf("multifdsend_%d", i);
         /* We need one extra place for the packet header */
         p->iov = g_new0(struct iovec, page_count + 1);
-        p->page_size = qemu_target_page_size();
         p->page_count = page_count;
 
         if (migrate_zero_copy_send()) {
