@@ -124,10 +124,6 @@ typedef struct {
     struct iovec *iov;
     /* number of iovs used */
     uint32_t iovs_num;
-    /* Pages that are not zero */
-    ram_addr_t *normal;
-    /* num of non zero pages */
-    uint32_t normal_num;
     /* used for compression methods */
     void *data;
 }  MultiFDSendParams;
@@ -207,4 +203,3 @@ typedef struct {
 void multifd_register_ops(int method, MultiFDMethods *ops);
 
 #endif
-
