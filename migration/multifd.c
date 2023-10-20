@@ -675,8 +675,8 @@ static void *multifd_send_thread(void *opaque)
 
         if (p->pending_job) {
             uint64_t packet_num = p->packet_num;
-            uint64_t normal_num;
             uint32_t flags;
+            size_t bytes_sent;
 
             if (use_zero_copy_send) {
                 p->iovs_num = 0;
@@ -695,13 +695,14 @@ static void *multifd_send_thread(void *opaque)
             flags = p->flags;
             p->flags = 0;
             p->num_packets++;
-            p->total_normal_pages += p->pages->num;
-            normal_num = p->pages->num;
+
+            bytes_sent = p->pages->num * p->pages->page_size;
+            p->total_bytes_sent += bytes_sent;
             p->pages->num = 0;
             p->pages->block = NULL;
             qemu_mutex_unlock(&p->mutex);
 
-            trace_multifd_send(p->id, packet_num, normal_num, flags,
+            trace_multifd_send(p->id, packet_num, bytes_sent, flags,
                                p->next_packet_size);
 
             if (use_zero_copy_send) {
@@ -760,7 +761,7 @@ out:
 
     rcu_unregister_thread();
     migration_threads_remove(thread);
-    trace_multifd_send_thread_end(p->id, p->num_packets, p->total_normal_pages);
+    trace_multifd_send_thread_end(p->id, p->num_packets, p->total_bytes_sent);
 
     return NULL;
 }

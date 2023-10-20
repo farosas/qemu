@@ -116,8 +116,8 @@ typedef struct {
     uint32_t next_packet_size;
     /* packets sent through this channel */
     uint64_t num_packets;
-    /* non zero pages sent through this channel */
-    uint64_t total_normal_pages;
+    /* bytes sent through this channel */
+    uint64_t total_bytes_sent;
     /* buffers to send */
     struct iovec *iov;
     /* number of iovs used */
