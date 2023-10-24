@@ -241,7 +241,6 @@ static MultiFDPages_t *multifd_pages_init(uint32_t n)
 {
     MultiFDPages_t *pages = g_new0(MultiFDPages_t, 1);
 
-    pages->allocated = n;
     pages->offset = g_new0(ram_addr_t, n);
     pages->page_size = qemu_target_page_size();
 
@@ -251,7 +250,6 @@ static MultiFDPages_t *multifd_pages_init(uint32_t n)
 static void multifd_pages_clear(MultiFDPages_t *pages)
 {
     pages->num = 0;
-    pages->allocated = 0;
     pages->block = NULL;
     g_free(pages->offset);
     pages->offset = NULL;
@@ -264,7 +262,8 @@ static void multifd_send_fill_packet(MultiFDSendParams *p)
     int i;
 
     packet->flags = cpu_to_be32(p->flags);
-    packet->pages_alloc = cpu_to_be32(p->pages->allocated);
+    packet->pages_alloc = cpu_to_be32(MULTIFD_PACKET_SIZE /
+                                      p->pages->page_size);
     packet->normal_pages = cpu_to_be32(p->pages->num);
     packet->next_packet_size = cpu_to_be32(p->next_packet_size);
     packet->packet_num = cpu_to_be64(p->packet_num);
@@ -451,7 +450,7 @@ int multifd_queue_page(RAMBlock *block, ram_addr_t offset)
         pages->offset[pages->num] = offset;
         pages->num++;
 
-        if (pages->num < pages->allocated) {
+        if (pages->num * pages->page_size < MULTIFD_PACKET_SIZE) {
             return 1;
         }
     } else {

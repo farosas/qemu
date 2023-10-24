@@ -56,8 +56,6 @@ typedef struct {
 typedef struct {
     /* number of used pages */
     uint32_t num;
-    /* number of allocated pages */
-    uint32_t allocated;
     /* guest page size */
     uint32_t page_size;
     /* offset of each page */
