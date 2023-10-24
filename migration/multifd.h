@@ -13,6 +13,9 @@
 #ifndef QEMU_MIGRATION_MULTIFD_H
 #define QEMU_MIGRATION_MULTIFD_H
 
+typedef struct MultiFDPages_t MultiFDPages_t;
+typedef struct MultiFDData_t MultiFDData_t;
+
 int multifd_save_setup(Error **errp);
 void multifd_save_cleanup(void);
 int multifd_load_setup(Error **errp);
@@ -53,7 +56,7 @@ typedef struct {
     uint64_t offset[];
 } __attribute__((packed)) MultiFDPacket_t;
 
-typedef struct {
+struct MultiFDPages_t {
     /* number of used pages */
     uint32_t num;
     /* guest page size */
@@ -61,7 +64,12 @@ typedef struct {
     /* offset of each page */
     ram_addr_t *offset;
     RAMBlock *block;
-} MultiFDPages_t;
+};
+
+struct MultiFDData_t {
+    size_t size;
+    bool ready;
+};
 
 typedef struct {
     /* Fields are only written at creating/deletion time */
@@ -107,6 +115,7 @@ typedef struct {
      * pending_job != 0 -> multifd_channel can use it.
      */
     MultiFDPages_t *pages;
+    MultiFDData_t *data;
 
     /* thread local variables. No locking required */
 

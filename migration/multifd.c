@@ -358,6 +358,7 @@ struct {
     MultiFDSendParams *params;
     /* array of pages to sent */
     MultiFDPages_t *pages;
+    MultiFDData_t *data;
     /* global number of generated multifd packets */
     uint64_t packet_num;
     /* send channels ready */
@@ -396,6 +397,7 @@ static int multifd_send_pages(void)
     static int next_channel;
     MultiFDSendParams *p = NULL; /* make happy gcc */
     MultiFDPages_t *pages = multifd_send_state->pages;
+    MultiFDData_t *data = multifd_send_state->data;
 
     if (qatomic_read(&multifd_send_state->exiting)) {
         return -1;
@@ -425,11 +427,15 @@ static int multifd_send_pages(void)
         qemu_mutex_unlock(&p->mutex);
     }
     assert(!p->pages->num);
+    assert(!p->data->ready);
+
     assert(!p->pages->block);
 
     p->packet_num = multifd_send_state->packet_num++;
     multifd_send_state->pages = p->pages;
+    multifd_send_state->data = p->data;
     p->pages = pages;
+    p->data = data;
     qemu_mutex_unlock(&p->mutex);
     qemu_sem_post(&p->sem);
 
@@ -439,6 +445,7 @@ static int multifd_send_pages(void)
 int multifd_queue_page(RAMBlock *block, ram_addr_t offset)
 {
     MultiFDPages_t *pages = multifd_send_state->pages;
+    MultiFDData_t *data = multifd_send_state->data;
     bool changed = false;
 
     if (!pages->block) {
@@ -449,6 +456,8 @@ int multifd_queue_page(RAMBlock *block, ram_addr_t offset)
         pages->offset[pages->num] = offset;
         pages->num++;
 
+        data->size = pages->num * pages->page_size;
+        data->ready = true;
         if (pages->num * pages->page_size < MULTIFD_PACKET_SIZE) {
             return 1;
         }
@@ -543,6 +552,7 @@ void multifd_save_cleanup(void)
         g_free(p->name);
         p->name = NULL;
         multifd_pages_clear(p->pages);
+
         p->pages = NULL;
         p->packet_len = 0;
         g_free(p->packet);
@@ -550,6 +560,11 @@ void multifd_save_cleanup(void)
         g_free(p->iov);
         p->iov = NULL;
         multifd_send_state->ops->send_cleanup(p, &local_err);
+
+        p->data->ready = false;
+        g_free(p->data);
+        p->data = NULL;
+
         if (local_err) {
             migrate_set_error(migrate_get_current(), local_err);
             error_free(local_err);
@@ -560,6 +575,11 @@ void multifd_save_cleanup(void)
     multifd_send_state->params = NULL;
     multifd_pages_clear(multifd_send_state->pages);
     multifd_send_state->pages = NULL;
+
+    multifd_send_state->data->ready = false;
+    g_free(multifd_send_state->data);
+    multifd_send_state->data = NULL;
+
     g_free(multifd_send_state);
     multifd_send_state = NULL;
 }
@@ -589,7 +609,7 @@ int multifd_send_sync_main(void)
     if (!migrate_multifd()) {
         return 0;
     }
-    if (multifd_send_state->pages->num) {
+    if (multifd_send_state->data->ready) {
         if (multifd_send_pages() < 0) {
             error_report("%s: multifd_send_pages fail", __func__);
             return -1;
@@ -684,7 +704,7 @@ static void *multifd_send_thread(void *opaque)
                 p->iovs_num = 1;
             }
 
-            if (p->pages->num) {
+            if (p->data->ready) {
                 ret = multifd_send_state->ops->send_prepare(p, &local_err);
                 if (ret != 0) {
                     qemu_mutex_unlock(&p->mutex);
@@ -696,9 +716,11 @@ static void *multifd_send_thread(void *opaque)
             p->flags = 0;
             p->num_packets++;
 
-            bytes_sent = p->pages->num * p->pages->page_size;
+            bytes_sent = p->data->size;
             p->total_bytes_sent += bytes_sent;
             p->pages->num = 0;
+            p->data->ready = false;
+            p->data->size = 0;
             p->pages->block = NULL;
             qemu_mutex_unlock(&p->mutex);
 
@@ -913,6 +935,9 @@ int multifd_save_setup(Error **errp)
     multifd_send_state = g_malloc0(sizeof(*multifd_send_state));
     multifd_send_state->params = g_new0(MultiFDSendParams, thread_count);
     multifd_send_state->pages = multifd_pages_init(page_count);
+
+    multifd_send_state->data = g_new0(MultiFDData_t, 1);
+
     qemu_sem_init(&multifd_send_state->channels_ready, 0);
     qatomic_set(&multifd_send_state->exiting, 0);
     multifd_send_state->ops = multifd_ops[migrate_multifd_compression()];
@@ -927,6 +952,7 @@ int multifd_save_setup(Error **errp)
         p->pending_job = 0;
         p->id = i;
         p->pages = multifd_pages_init(page_count);
+        p->data = g_new0(MultiFDData_t, 1);
         p->packet_len = sizeof(MultiFDPacket_t)
                       + sizeof(uint64_t) * page_count;
         p->packet = g_malloc0(p->packet_len);
