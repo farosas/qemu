@@ -270,16 +270,17 @@ static int multifd_recv_initial_packet(QIOChannel *c, Error **errp)
     return msg.id;
 }
 
-static void multifd_send_fill_packet(MultiFDSendParams *p)
+/*
+ * Compatibility for old QEMUs that expect pages information to be
+ * present in the main multifd header.
+ */
+static void multifd_send_fill_packet_compat(MultiFDSendParams *p)
 {
     MultiFDPacket_t *packet = p->packet;
     int i;
 
-    packet->flags = cpu_to_be32(p->flags);
     packet->max_pages = cpu_to_be32(MULTIFD_PACKET_SIZE / p->pages->page_size);
     packet->normal_pages = cpu_to_be32(p->pages->num);
-    packet->next_packet_size = cpu_to_be32(p->next_packet_size);
-    packet->packet_num = cpu_to_be64(p->packet_num);
 
     if (!g_str_equal(p->pages->block_idstr, "")) {
         strncpy(packet->ramblock, p->pages->block_idstr, 256);
@@ -291,6 +292,18 @@ static void multifd_send_fill_packet(MultiFDSendParams *p)
 
         packet->offset[i] = cpu_to_be64(temp);
     }
+    pages->num = 0;
+}
+
+static void multifd_send_fill_packet(MultiFDSendParams *p)
+{
+    MultiFDPacket_t *packet = p->packet;
+
+    packet->flags = cpu_to_be32(p->flags);
+    packet->next_packet_size = cpu_to_be32(p->next_packet_size);
+    packet->packet_num = cpu_to_be64(p->packet_num);
+
+    multifd_send_fill_packet_compat(p);
 }
 
 static int multifd_recv_unfill_packet(MultiFDRecvParams *p, Error **errp)
@@ -692,7 +705,6 @@ static void *multifd_send_thread(void *opaque)
 
             bytes_sent = p->data->size;
             p->total_bytes_sent += bytes_sent;
-            p->pages->num = 0;
             p->data->ready = false;
             p->data->size = 0;
             qemu_mutex_unlock(&p->mutex);
