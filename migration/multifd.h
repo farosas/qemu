@@ -72,6 +72,7 @@ struct MultiFDPages_t {
 };
 
 struct MultiFDData_t {
+    void *opaque;
     size_t size;
     bool ready;
     void (*cleanup_fn)(void *);
@@ -115,12 +116,11 @@ typedef struct {
     uint64_t packet_num;
     /* thread has work to do */
     int pending_job;
-    /* array of pages to sent.
-     * The owner of 'pages' depends of 'pending_job' value:
+    /*
+     * The owner of 'data' depends of 'pending_job' value:
      * pending_job == 0 -> migration_thread can use it.
      * pending_job != 0 -> multifd_channel can use it.
      */
-    MultiFDPages_t *pages;
     MultiFDData_t *data;
 
     /* thread local variables. No locking required */

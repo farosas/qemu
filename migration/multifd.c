@@ -47,8 +47,6 @@ typedef struct {
 
 struct {
     MultiFDSendParams *params;
-    /* array of pages to sent */
-    MultiFDPages_t *pages;
     MultiFDData_t *data;
     /* global number of generated multifd packets */
     uint64_t packet_num;
@@ -63,12 +61,6 @@ struct {
     /* multifd ops */
     MultiFDMethods *ops;
 } *multifd_send_state;
-
-/* this one will go away */
-MultiFDPages_t *multifd_get_state(void)
-{
-    return multifd_send_state->pages;
-}
 
 MultiFDData_t *multifd_get_data(void)
 {
@@ -103,8 +95,8 @@ static int nocomp_send_setup(MultiFDSendParams *p, Error **errp)
 static void nocomp_send_cleanup(MultiFDSendParams *p, Error **errp)
 {
     if (multifd_send_state->data->cleanup_fn) {
-        multifd_send_state->data->cleanup_fn(p->pages);
-        p->pages = NULL;
+        multifd_send_state->data->cleanup_fn(p->data->opaque);
+        p->data->opaque = NULL;
     }
 }
 
@@ -121,7 +113,7 @@ static void nocomp_send_cleanup(MultiFDSendParams *p, Error **errp)
  */
 static int nocomp_send_prepare(MultiFDSendParams *p, Error **errp)
 {
-    MultiFDPages_t *pages = p->pages;
+    MultiFDPages_t *pages = p->data->opaque;
 
     for (int i = 0; i < pages->num; i++) {
         p->iov[p->iovs_num].iov_base = pages->block->host + pages->offset[i];
@@ -277,18 +269,19 @@ static int multifd_recv_initial_packet(QIOChannel *c, Error **errp)
 static void multifd_send_fill_packet_compat(MultiFDSendParams *p)
 {
     MultiFDPacket_t *packet = p->packet;
+    MultiFDPages_t *pages = p->data->opaque;
     int i;
 
-    packet->max_pages = cpu_to_be32(MULTIFD_PACKET_SIZE / p->pages->page_size);
-    packet->normal_pages = cpu_to_be32(p->pages->num);
+    packet->max_pages = cpu_to_be32(MULTIFD_PACKET_SIZE / pages->page_size);
+    packet->normal_pages = cpu_to_be32(pages->num);
 
-    if (!g_str_equal(p->pages->block_idstr, "")) {
-        strncpy(packet->ramblock, p->pages->block_idstr, 256);
+    if (!g_str_equal(pages->block_idstr, "")) {
+        strncpy(packet->ramblock, pages->block_idstr, 256);
     }
 
-    for (i = 0; i < p->pages->num; i++) {
+    for (i = 0; i < pages->num; i++) {
         /* there are architectures where ram_addr_t is 32 bit */
-        uint64_t temp = p->pages->offset[i];
+        uint64_t temp = pages->offset[i];
 
         packet->offset[i] = cpu_to_be64(temp);
     }
@@ -404,7 +397,6 @@ static int multifd_send_pages(void)
     int i;
     static int next_channel;
     MultiFDSendParams *p = NULL; /* make happy gcc */
-    MultiFDPages_t *pages = multifd_send_state->pages;
     MultiFDData_t *data = multifd_send_state->data;
 
     if (qatomic_read(&multifd_send_state->exiting)) {
@@ -434,13 +426,11 @@ static int multifd_send_pages(void)
         }
         qemu_mutex_unlock(&p->mutex);
     }
-    assert(!p->pages->num);
+    assert(!p->data->size);
     assert(!p->data->ready);
 
     p->packet_num = multifd_send_state->packet_num++;
-    multifd_send_state->pages = p->pages;
     multifd_send_state->data = p->data;
-    p->pages = pages;
     p->data = data;
     qemu_mutex_unlock(&p->mutex);
     qemu_sem_post(&p->sem);
@@ -559,8 +549,8 @@ void multifd_save_cleanup(void)
     multifd_send_state->params = NULL;
 
     if (multifd_send_state->data->cleanup_fn) {
-        multifd_send_state->data->cleanup_fn(multifd_send_state->pages);
-        multifd_send_state->pages = NULL;
+        multifd_send_state->data->cleanup_fn(multifd_send_state->data->opaque);
+        multifd_send_state->data->opaque = NULL;
     }
 
     multifd_send_state->data->ready = false;
@@ -912,13 +902,13 @@ void multifd_init_opaque(void *(*init_fn)(uint64_t),
     uint64_t max_size = MULTIFD_PACKET_SIZE;
     assert(multifd_send_state);
 
-    multifd_send_state->pages = init_fn(max_size);
+    multifd_send_state->data->opaque = init_fn(max_size);
     multifd_send_state->data->cleanup_fn = cleanup_fn;
 
     for (int i = 0; i < migrate_multifd_channels(); i++) {
         MultiFDSendParams *p = &multifd_send_state->params[i];
 
-        p->pages = init_fn(max_size);
+        p->data->opaque = init_fn(max_size);
         p->data->cleanup_fn = cleanup_fn;
     }
 }

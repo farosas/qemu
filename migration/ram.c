@@ -1282,8 +1282,8 @@ static int ram_save_page(RAMState *rs, PageSearchStatus *pss)
 
 static int ram_save_multifd_page(RAMBlock *block, ram_addr_t offset)
 {
-    MultiFDPages_t *pages = multifd_get_state();
     MultiFDData_t *data = multifd_get_data();
+    MultiFDPages_t *pages = data->opaque;
     bool flush = false;
 
     if (!pages->block) {

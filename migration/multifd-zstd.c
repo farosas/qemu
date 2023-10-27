@@ -114,6 +114,7 @@ static void zstd_send_cleanup(MultiFDSendParams *p, Error **errp)
 static int zstd_send_prepare(MultiFDSendParams *p, Error **errp)
 {
     struct zstd_data *z = p->compress_data;
+    MultiFDPages_t *pages = p->data->opaque;
     int ret;
     uint32_t i;
 
@@ -121,14 +122,14 @@ static int zstd_send_prepare(MultiFDSendParams *p, Error **errp)
     z->out.size = z->zbuff_len;
     z->out.pos = 0;
 
-    for (i = 0; i < p->pages->num; i++) {
+    for (i = 0; i < pages->num; i++) {
         ZSTD_EndDirective flush = ZSTD_e_continue;
 
-        if (i == p->pages->num - 1) {
+        if (i == pages->num - 1) {
             flush = ZSTD_e_flush;
         }
-        z->in.src = p->pages->block->host + p->pages->offset[i];
-        z->in.size = p->pages->page_size;
+        z->in.src = pages->block->host + pages->offset[i];
+        z->in.size = pages->page_size;
         z->in.pos = 0;
 
         /*
@@ -154,7 +155,7 @@ static int zstd_send_prepare(MultiFDSendParams *p, Error **errp)
             return -1;
         }
     }
-    p->pages->block = NULL;
+    pages->block = NULL;
     p->iov[p->iovs_num].iov_base = z->zbuff;
     p->iov[p->iovs_num].iov_len = z->out.pos;
     p->iovs_num++;
