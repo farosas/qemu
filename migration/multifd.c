@@ -373,6 +373,17 @@ struct {
     MultiFDMethods *ops;
 } *multifd_send_state;
 
+/* this one will go away */
+MultiFDPages_t *multifd_get_state(void)
+{
+    return multifd_send_state->pages;
+}
+
+MultiFDData_t *multifd_get_data(void)
+{
+    return multifd_send_state->data;
+}
+
 /*
  * How we use multifd_send_state->pages and channel->pages?
  *
@@ -442,7 +453,7 @@ static int multifd_send_pages(void)
     return 1;
 }
 
-static int multifd_enqueue(bool flush)
+int multifd_enqueue(bool flush)
 {
     MultiFDData_t *data = multifd_send_state->data;
 
@@ -453,42 +464,6 @@ static int multifd_enqueue(bool flush)
     if (multifd_send_pages() < 0) {
         return -1;
     }
-    return 1;
-}
-
-int multifd_queue_page(RAMBlock *block, ram_addr_t offset)
-{
-    MultiFDPages_t *pages = multifd_send_state->pages;
-    MultiFDData_t *data = multifd_send_state->data;
-    bool flush = false;
-
-    if (!pages->block) {
-        pages->block = block;
-    }
-
-    if (pages->block == block) {
-        pages->offset[pages->num] = offset;
-        pages->num++;
-
-        data->size = pages->num * pages->page_size;
-        data->ready = true;
-    } else {
-        /*
-         * We're processing a new block, make sure we send all pages
-         * from the previous block first.
-         */
-        flush = true;
-    }
-
-    if (multifd_enqueue(flush) < 0) {
-        return -1;
-    }
-
-    if (flush) {
-        /* go again with the new block */
-        return multifd_queue_page(block, offset);
-    }
-
     return 1;
 }
 

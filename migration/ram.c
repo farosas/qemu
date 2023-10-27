@@ -1282,10 +1282,36 @@ static int ram_save_page(RAMState *rs, PageSearchStatus *pss)
 
 static int ram_save_multifd_page(RAMBlock *block, ram_addr_t offset)
 {
-    if (multifd_queue_page(block, offset) < 0) {
+    MultiFDPages_t *pages = multifd_get_state();
+    MultiFDData_t *data = multifd_get_data();
+    bool flush = false;
+
+    if (!pages->block) {
+        pages->block = block;
+    }
+
+    if (pages->block == block) {
+        pages->offset[pages->num] = offset;
+        pages->num++;
+        data->size = pages->num * pages->page_size;
+        data->ready = true;
+        stat64_add(&mig_stats.normal_pages, 1);
+    } else {
+        /*
+         * We're processing a new block, make sure we send all pages
+         * from the previous block first.
+         */
+        flush = true;
+    }
+
+    if (multifd_enqueue(flush) < 0) {
         return -1;
     }
-    stat64_add(&mig_stats.normal_pages, 1);
+
+    if (flush) {
+        /* go again with the new block */
+        return ram_save_multifd_page(block, offset);
+    }
 
     return 1;
 }
