@@ -65,6 +65,7 @@ struct MultiFDPages_t {
     uint32_t num;
     /* guest page size */
     uint32_t page_size;
+    char block_idstr[256];
     /* offset of each page */
     ram_addr_t *offset;
     RAMBlock *block;

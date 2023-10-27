@@ -166,6 +166,7 @@ static int zlib_send_prepare(MultiFDSendParams *p, Error **errp)
         }
         out_size += available - zs->avail_out;
     }
+    p->pages->block = NULL;
     p->iov[p->iovs_num].iov_base = z->zbuff;
     p->iov[p->iovs_num].iov_len = out_size;
     p->iovs_num++;

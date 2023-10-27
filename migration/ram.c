@@ -1288,6 +1288,7 @@ static int ram_save_multifd_page(RAMBlock *block, ram_addr_t offset)
 
     if (!pages->block) {
         pages->block = block;
+        strncpy(pages->block_idstr, block->idstr, 256);
     }
 
     if (pages->block == block) {

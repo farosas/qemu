@@ -154,6 +154,7 @@ static int zstd_send_prepare(MultiFDSendParams *p, Error **errp)
             return -1;
         }
     }
+    p->pages->block = NULL;
     p->iov[p->iovs_num].iov_base = z->zbuff;
     p->iov[p->iovs_num].iov_len = z->out.pos;
     p->iovs_num++;

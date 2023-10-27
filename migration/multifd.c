@@ -128,7 +128,7 @@ static int nocomp_send_prepare(MultiFDSendParams *p, Error **errp)
         p->iov[p->iovs_num].iov_len = pages->page_size;
         p->iovs_num++;
     }
-
+    pages->block = NULL;
     p->next_packet_size = pages->num * pages->page_size;
     p->flags |= MULTIFD_FLAG_NOCOMP;
     return 0;
@@ -281,8 +281,8 @@ static void multifd_send_fill_packet(MultiFDSendParams *p)
     packet->next_packet_size = cpu_to_be32(p->next_packet_size);
     packet->packet_num = cpu_to_be64(p->packet_num);
 
-    if (p->pages->block) {
-        strncpy(packet->ramblock, p->pages->block->idstr, 256);
+    if (!g_str_equal(p->pages->block_idstr, "")) {
+        strncpy(packet->ramblock, p->pages->block_idstr, 256);
     }
 
     for (i = 0; i < p->pages->num; i++) {
@@ -423,8 +423,6 @@ static int multifd_send_pages(void)
     }
     assert(!p->pages->num);
     assert(!p->data->ready);
-
-    assert(!p->pages->block);
 
     p->packet_num = multifd_send_state->packet_num++;
     multifd_send_state->pages = p->pages;
@@ -697,7 +695,6 @@ static void *multifd_send_thread(void *opaque)
             p->pages->num = 0;
             p->data->ready = false;
             p->data->size = 0;
-            p->pages->block = NULL;
             qemu_mutex_unlock(&p->mutex);
 
             trace_multifd_send(p->id, packet_num, bytes_sent, flags,
