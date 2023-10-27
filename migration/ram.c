@@ -3004,6 +3004,29 @@ void qemu_guest_free_page_hint(void *addr, size_t len)
     }
 }
 
+static void ram_cleanup_multifd_pages(void *opaque)
+{
+    MultiFDPages_t *pages = opaque;
+
+    assert(pages);
+
+    pages->num = 0;
+    pages->block = NULL;
+    g_free(pages->offset);
+    pages->offset = NULL;
+    g_free(pages);
+}
+
+static void *ram_init_multifd_pages(uint64_t max_size)
+{
+    MultiFDPages_t *pages = g_new0(MultiFDPages_t, 1);
+
+    pages->page_size = qemu_target_page_size();
+    pages->offset = g_new0(ram_addr_t, max_size / pages->page_size);
+
+    return pages;
+}
+
 /*
  * Each of ram_save_setup, ram_save_iterate and ram_save_complete has
  * long-running RCU critical section.  When rcu-reclaims in the code
@@ -3027,6 +3050,10 @@ static int ram_save_setup(QEMUFile *f, void *opaque)
 
     if (compress_threads_save_setup()) {
         return -1;
+    }
+
+    if (migrate_multifd()) {
+        multifd_init_opaque(ram_init_multifd_pages, ram_cleanup_multifd_pages);
     }
 
     /* migration has already setup the bitmap, reuse it. */

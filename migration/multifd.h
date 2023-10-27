@@ -28,6 +28,8 @@ int multifd_send_sync_main(void);
 MultiFDData_t *multifd_get_data(void);
 MultiFDPages_t *multifd_get_state(void);
 int multifd_enqueue(bool flush);
+void multifd_init_opaque(void *(*init_fn)(uint64_t),
+                         void (*cleanup_fn)(void *));
 
 /* Multifd Compression flags */
 #define MULTIFD_FLAG_SYNC (1 << 0)
@@ -71,6 +73,7 @@ struct MultiFDPages_t {
 struct MultiFDData_t {
     size_t size;
     bool ready;
+    void (*cleanup_fn)(void *);
 };
 
 typedef struct {
