@@ -442,11 +442,25 @@ static int multifd_send_pages(void)
     return 1;
 }
 
+static int multifd_enqueue(bool flush)
+{
+    MultiFDData_t *data = multifd_send_state->data;
+
+    if (!flush && data->size < MULTIFD_PACKET_SIZE) {
+        return 1;
+    }
+
+    if (multifd_send_pages() < 0) {
+        return -1;
+    }
+    return 1;
+}
+
 int multifd_queue_page(RAMBlock *block, ram_addr_t offset)
 {
     MultiFDPages_t *pages = multifd_send_state->pages;
     MultiFDData_t *data = multifd_send_state->data;
-    bool changed = false;
+    bool flush = false;
 
     if (!pages->block) {
         pages->block = block;
@@ -458,18 +472,20 @@ int multifd_queue_page(RAMBlock *block, ram_addr_t offset)
 
         data->size = pages->num * pages->page_size;
         data->ready = true;
-        if (pages->num * pages->page_size < MULTIFD_PACKET_SIZE) {
-            return 1;
-        }
     } else {
-        changed = true;
+        /*
+         * We're processing a new block, make sure we send all pages
+         * from the previous block first.
+         */
+        flush = true;
     }
 
-    if (multifd_send_pages() < 0) {
+    if (multifd_enqueue(flush) < 0) {
         return -1;
     }
 
-    if (changed) {
+    if (flush) {
+        /* go again with the new block */
         return multifd_queue_page(block, offset);
     }
 
