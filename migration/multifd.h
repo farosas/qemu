@@ -123,7 +123,7 @@ typedef struct {
     /* number of iovs used */
     uint32_t iovs_num;
     /* used for compression methods */
-    void *data;
+    void *compress_data;
 }  MultiFDSendParams;
 
 typedef struct {
