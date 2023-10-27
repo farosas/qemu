@@ -375,16 +375,16 @@ static int multifd_recv_unfill_packet(MultiFDRecvParams *p, Error **errp)
 }
 
 /*
- * How we use multifd_send_state->pages and channel->pages?
+ * How we use multifd_send_state->data and channel->data?
  *
- * We create a pages for each channel, and a main one.  Each time that
- * we need to send a batch of pages we interchange the ones between
- * multifd_send_state and the channel that is sending it.  There are
- * two reasons for that:
+ * We create a "data" structure for each channel, and a main one.
+ * Each time that we need to send a payload we interchange the ones
+ * between multifd_send_state and the channel that is sending it.
+ * There are two reasons for that:
  *    - to not have to do so many mallocs during migration
  *    - to make easier to know what to free at the end of migration
  *
- * This way we always know who is the owner of each "pages" struct,
+ * This way we always know who is the owner of each "data" struct,
  * and we don't need any locking.  It belongs to the migration thread
  * or to the channel thread.  Switching is safe because the migration
  * thread is using the channel mutex when changing it, and the channel
@@ -392,7 +392,7 @@ static int multifd_recv_unfill_packet(MultiFDRecvParams *p, Error **errp)
  * false.
  */
 
-static int multifd_send_pages(void)
+static int multifd_send(void)
 {
     int i;
     static int next_channel;
@@ -446,7 +446,7 @@ int multifd_enqueue(bool flush)
         return 1;
     }
 
-    if (multifd_send_pages() < 0) {
+    if (multifd_send() < 0) {
         return -1;
     }
     return 1;
@@ -587,8 +587,8 @@ int multifd_send_sync_main(void)
         return 0;
     }
     if (multifd_send_state->data->ready) {
-        if (multifd_send_pages() < 0) {
-            error_report("%s: multifd_send_pages fail", __func__);
+        if (multifd_send() < 0) {
+            error_report("%s: multifd_send fail", __func__);
             return -1;
         }
     }
