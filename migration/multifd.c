@@ -45,6 +45,36 @@ typedef struct {
     uint64_t unused2[4];    /* Reserved for future use */
 } __attribute__((packed)) MultiFDInit_t;
 
+struct {
+    MultiFDSendParams *params;
+    /* array of pages to sent */
+    MultiFDPages_t *pages;
+    MultiFDData_t *data;
+    /* global number of generated multifd packets */
+    uint64_t packet_num;
+    /* send channels ready */
+    QemuSemaphore channels_ready;
+    /*
+     * Have we already run terminate threads.  There is a race when it
+     * happens that we got one error while we are exiting.
+     * We will use atomic operations.  Only valid values are 0 and 1.
+     */
+    int exiting;
+    /* multifd ops */
+    MultiFDMethods *ops;
+} *multifd_send_state;
+
+/* this one will go away */
+MultiFDPages_t *multifd_get_state(void)
+{
+    return multifd_send_state->pages;
+}
+
+MultiFDData_t *multifd_get_data(void)
+{
+    return multifd_send_state->data;
+}
+
 /* Multifd without compression */
 
 /**
@@ -352,36 +382,6 @@ static int multifd_recv_unfill_packet(MultiFDRecvParams *p, Error **errp)
     }
 
     return 0;
-}
-
-struct {
-    MultiFDSendParams *params;
-    /* array of pages to sent */
-    MultiFDPages_t *pages;
-    MultiFDData_t *data;
-    /* global number of generated multifd packets */
-    uint64_t packet_num;
-    /* send channels ready */
-    QemuSemaphore channels_ready;
-    /*
-     * Have we already run terminate threads.  There is a race when it
-     * happens that we got one error while we are exiting.
-     * We will use atomic operations.  Only valid values are 0 and 1.
-     */
-    int exiting;
-    /* multifd ops */
-    MultiFDMethods *ops;
-} *multifd_send_state;
-
-/* this one will go away */
-MultiFDPages_t *multifd_get_state(void)
-{
-    return multifd_send_state->pages;
-}
-
-MultiFDData_t *multifd_get_data(void)
-{
-    return multifd_send_state->data;
 }
 
 /*
