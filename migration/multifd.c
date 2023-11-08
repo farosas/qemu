@@ -1004,6 +1004,7 @@ static void *multifd_recv_thread(void *opaque)
 
     while (true) {
         uint32_t flags = 0;
+        bool has_data = false;
         p->normal_num = 0;
 
         if (p->quit) {
@@ -1032,12 +1033,13 @@ static void *multifd_recv_thread(void *opaque)
                                p->next_packet_size);
 
             p->total_normal_pages += p->normal_num;
+            has_data = !!p->normal_num;
         }
 
         qemu_mutex_unlock(&p->mutex);
 
-        if (p->normal_num) {
-            ret = multifd_recv_state->ops->recv_pages(p, &local_err);
+        if (has_data) {
+            ret = multifd_recv_state->ops->recv(p, &local_err);
             if (ret != 0) {
                 break;
             }

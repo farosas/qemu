@@ -201,8 +201,8 @@ typedef struct {
     int (*recv_setup)(MultiFDRecvParams *p, Error **errp);
     /* Cleanup for receiving side */
     void (*recv_cleanup)(MultiFDRecvParams *p);
-    /* Read all pages */
-    int (*recv_pages)(MultiFDRecvParams *p, Error **errp);
+    /* Read all data */
+    int (*recv)(MultiFDRecvParams *p, Error **errp);
 } MultiFDMethods;
 
 extern MultiFDMethods multifd_socket_ops;

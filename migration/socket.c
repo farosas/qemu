@@ -265,7 +265,7 @@ static void multifd_socket_recv_cleanup(MultiFDRecvParams *p)
 {
 }
 
-static int multifd_socket_recv_pages(MultiFDRecvParams *p, Error **errp)
+static int multifd_socket_recv(MultiFDRecvParams *p, Error **errp)
 {
     uint32_t flags = p->flags & MULTIFD_FLAG_COMPRESSION_MASK;
 
@@ -288,5 +288,5 @@ MultiFDMethods multifd_socket_ops = {
     .send_prepare = multifd_socket_send_prepare,
     .recv_setup = multifd_socket_recv_setup,
     .recv_cleanup = multifd_socket_recv_cleanup,
-    .recv_pages = multifd_socket_recv_pages
+    .recv = multifd_socket_recv
 };
