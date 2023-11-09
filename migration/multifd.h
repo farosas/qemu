@@ -206,7 +206,15 @@ typedef struct {
     int (*recv_pages)(MultiFDRecvParams *p, Error **errp);
 } MultiFDMethods;
 
+typedef struct {
+    /* Check if the compression method supports acceleration */
+    bool (*is_supported) (MultiFDCompression compression);
+    /* Get multifd methods of the accelerator */
+    MultiFDMethods* (*get_multifd_methods)(void);
+} MultiFDAccelMethods;
+
 void multifd_register_ops(int method, MultiFDMethods *ops);
+void multifd_register_accel_ops(int accel, MultiFDAccelMethods *ops);
 
 #endif
 

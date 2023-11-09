@@ -165,11 +165,45 @@ static MultiFDMethods multifd_nocomp_ops = {
 static MultiFDMethods *multifd_ops[MULTIFD_COMPRESSION__MAX] = {
     [MULTIFD_COMPRESSION_NONE] = &multifd_nocomp_ops,
 };
+static MultiFDAccelMethods *accel_multifd_ops[MULTIFD_COMPRESSION_ACCEL__MAX];
+
+static MultiFDMethods *get_multifd_ops(void)
+{
+    MultiFDCompression comp = migrate_multifd_compression();
+    MultiFDCompressionAccel accel = migrate_multifd_compression_accel();
+
+    if (comp == MULTIFD_COMPRESSION_NONE ||
+        accel == MULTIFD_COMPRESSION_ACCEL_NONE) {
+        return multifd_ops[comp];
+    }
+    if (accel == MULTIFD_COMPRESSION_ACCEL_AUTO) {
+        for (int i = 0; i < MULTIFD_COMPRESSION_ACCEL__MAX; i++) {
+            if (accel_multifd_ops[i] &&
+                accel_multifd_ops[i]->is_supported(comp)) {
+                return accel_multifd_ops[i]->get_multifd_methods();
+            }
+        }
+        return multifd_ops[comp];
+    }
+
+    /* Check if a specified accelerator is available */
+    if (accel_multifd_ops[accel] &&
+        accel_multifd_ops[accel]->is_supported(comp)) {
+        return accel_multifd_ops[accel]->get_multifd_methods();
+    }
+    return multifd_ops[comp];
+}
 
 void multifd_register_ops(int method, MultiFDMethods *ops)
 {
     assert(0 < method && method < MULTIFD_COMPRESSION__MAX);
     multifd_ops[method] = ops;
+}
+
+void multifd_register_accel_ops(int accel, MultiFDAccelMethods *ops)
+{
+    assert(0 < accel && accel < MULTIFD_COMPRESSION_ACCEL__MAX);
+    accel_multifd_ops[accel] = ops;
 }
 
 static int multifd_send_initial_packet(MultiFDSendParams *p, Error **errp)
@@ -916,7 +950,7 @@ int multifd_save_setup(Error **errp)
     multifd_send_state->pages = multifd_pages_init(page_count);
     qemu_sem_init(&multifd_send_state->channels_ready, 0);
     qatomic_set(&multifd_send_state->exiting, 0);
-    multifd_send_state->ops = multifd_ops[migrate_multifd_compression()];
+    multifd_send_state->ops = get_multifd_ops();
 
     for (i = 0; i < thread_count; i++) {
         MultiFDSendParams *p = &multifd_send_state->params[i];
@@ -1174,7 +1208,7 @@ int multifd_load_setup(Error **errp)
     multifd_recv_state->params = g_new0(MultiFDRecvParams, thread_count);
     qatomic_set(&multifd_recv_state->count, 0);
     qemu_sem_init(&multifd_recv_state->sem_sync, 0);
-    multifd_recv_state->ops = multifd_ops[migrate_multifd_compression()];
+    multifd_recv_state->ops = get_multifd_ops();
 
     for (i = 0; i < thread_count; i++) {
         MultiFDRecvParams *p = &multifd_recv_state->params[i];
