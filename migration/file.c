@@ -23,8 +23,6 @@
 
 static struct FileOutgoingArgs {
     char *fname;
-    int flags;
-    int mode;
     int64_t fdset_id;
 } outgoing_args;
 
@@ -148,7 +146,7 @@ void file_send_channel_create(QIOTaskFunc f, void *data)
     QIOChannelFile *ioc;
     QIOTask *task;
     Error *err = NULL;
-    int flags = outgoing_args.flags;
+    int flags = O_WRONLY;
 
     if (migrate_direct_io()) {
 #ifdef O_DIRECT
@@ -166,8 +164,7 @@ void file_send_channel_create(QIOTaskFunc f, void *data)
     }
 
     if (!err) {
-        ioc = qio_channel_file_new_path(outgoing_args.fname, flags,
-                                        outgoing_args.mode, &err);
+        ioc = qio_channel_file_new_path(outgoing_args.fname, flags, 0, &err);
     }
 
     task = qio_task_new(OBJECT(ioc), f, (gpointer)data, NULL);
@@ -197,8 +194,6 @@ void file_start_outgoing_migration(MigrationState *s,
     }
 
     outgoing_args.fname = g_strdup(filename);
-    outgoing_args.flags = flags;
-    outgoing_args.mode = mode;
 
     fioc = qio_channel_file_new_path(filename, flags, mode, errp);
     if (!fioc) {
