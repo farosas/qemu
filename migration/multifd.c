@@ -163,7 +163,6 @@ static int nocomp_recv_data(MultiFDRecvParams *p, Error **errp)
             return -1;
         }
 
-        data->size = 0;
         return 0;
     } else {
         for (int i = 0; i < p->normal_num; i++) {
@@ -1105,7 +1104,7 @@ int multifd_recv(void)
         }
         qemu_mutex_unlock(&p->mutex);
     }
-
+    assert(p->data->size == 0);
     multifd_recv_state->data = p->data;
     p->data = data;
     qemu_mutex_unlock(&p->mutex);
@@ -1219,15 +1218,25 @@ void multifd_recv_sync_main(void)
         return;
     }
 
+    if (!migrate_multifd_packets()) {
+        for (i = 0; i < migrate_multifd_channels(); i++) {
+            MultiFDRecvParams *p = &multifd_recv_state->params[i];
+
+            qemu_sem_post(&p->sem);
+            qemu_sem_wait(&p->sem_sync);
+
+            qemu_mutex_lock(&p->mutex);
+            assert(!p->pending_job || p->quit);
+            qemu_mutex_unlock(&p->mutex);
+        }
+        return;
+    }
+
     for (i = 0; i < migrate_multifd_channels(); i++) {
         MultiFDRecvParams *p = &multifd_recv_state->params[i];
 
         trace_multifd_recv_sync_main_wait(p->id);
         qemu_sem_wait(&multifd_recv_state->sem_sync);
-    }
-
-    if (!migrate_multifd_packets()) {
-        return;
     }
 
     for (i = 0; i < migrate_multifd_channels(); i++) {
@@ -1313,12 +1322,14 @@ static void *multifd_recv_thread(void *opaque)
             qemu_sem_wait(&p->sem_sync);
         } else {
             qemu_mutex_lock(&p->mutex);
+            p->data->size = 0;
             p->pending_job--;
             qemu_mutex_unlock(&p->mutex);
-
-            /* migration thread needs to know when we're done */
-            qemu_sem_post(&multifd_recv_state->sem_sync);
         }
+    }
+
+    if (!use_packets) {
+        qemu_sem_post(&p->sem_sync);
     }
 
     if (local_err) {

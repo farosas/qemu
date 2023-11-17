@@ -456,10 +456,6 @@ void qemu_put_buffer_at(QEMUFile *f, const uint8_t *buf, size_t buflen, off_t po
 {
     Error *err = NULL;
 
-    if (f->last_error) {
-        return;
-    }
-
     qemu_fflush(f);
     qio_channel_pwrite(f->ioc, (char *)buf, buflen, pos, &err);
 
