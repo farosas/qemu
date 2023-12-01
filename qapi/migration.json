@@ -668,7 +668,7 @@
 ##
 { 'enum': 'MultiFDCompressionAccel',
   'data': [ 'auto', 'none',
-            { 'name': 'qpl', 'if': 'CONFIG_QPL' } ] }
+            { 'name': 'qpl' } ] }
 
 ##
 # @BitmapMigrationBitmapAliasTransform:
