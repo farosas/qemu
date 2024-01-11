@@ -4127,6 +4127,7 @@ static int ram_load_precopy(QEMUFile *f)
                           RAM_SAVE_FLAG_ZERO);
     }
 
+    trace_ram_load_start();
     while (!ret && !(flags & RAM_SAVE_FLAG_EOS)) {
         ram_addr_t addr;
         void *host = NULL, *host_bak = NULL;
