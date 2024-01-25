@@ -11,6 +11,7 @@
  */
 
 #include "qemu/osdep.h"
+#include "qemu/iov.h"
 #include "qemu/rcu.h"
 #include "exec/target_page.h"
 #include "sysemu/sysemu.h"
@@ -171,6 +172,9 @@ static void multifd_send_fill_packet(MultiFDSendParams *p)
 
         packet->offset[i] = cpu_to_be64(temp);
     }
+
+    p->iov[0].iov_len = p->packet_len;
+    p->iov[0].iov_base = p->packet;
 }
 
 static int multifd_recv_unfill_packet(MultiFDRecvParams *p, Error **errp)
@@ -574,11 +578,8 @@ static void *multifd_send_thread(void *opaque)
             uint32_t flags;
             p->normal_num = 0;
 
-            if (use_zero_copy_send) {
-                p->iovs_num = 0;
-            } else {
-                p->iovs_num = 1;
-            }
+            /* The header is always added to the vector */
+            p->iovs_num = 1;
 
             for (int i = 0; i < p->pages->num; i++) {
                 p->normal[p->normal_num] = p->pages->offset[i];
@@ -605,16 +606,14 @@ static void *multifd_send_thread(void *opaque)
                                p->next_packet_size);
 
             if (use_zero_copy_send) {
-                /* Send header first, without zerocopy */
-                ret = qio_channel_write_all(p->c, (void *)p->packet,
-                                            p->packet_len, &local_err);
+                /* send header first, without zerocopy */
+                ret = qio_channel_writev(p->c, p->iov, 1, &local_err);
                 if (ret != 0) {
                     break;
                 }
-            } else {
-                /* Send header using the same writev call */
-                p->iov[0].iov_len = p->packet_len;
-                p->iov[0].iov_base = p->packet;
+
+                /* header sent, discard it */
+                iov_discard_front(&p->iov, &p->iovs_num, p->iov[0].iov_len);
             }
 
             ret = qio_channel_writev_full_all(p->c, p->iov, p->iovs_num, NULL,
