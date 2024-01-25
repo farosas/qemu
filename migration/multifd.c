@@ -574,12 +574,6 @@ static void *multifd_send_thread(void *opaque)
             uint32_t flags;
             p->normal_num = 0;
 
-            if (use_zero_copy_send) {
-                p->iovs_num = 0;
-            } else {
-                p->iovs_num = 1;
-            }
-
             for (int i = 0; i < p->pages->num; i++) {
                 p->normal[p->normal_num] = p->pages->offset[i];
                 p->normal_num++;

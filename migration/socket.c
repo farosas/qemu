@@ -217,6 +217,12 @@ static int multifd_socket_send_prepare(MultiFDSendParams *p, Error **errp)
 {
     MultiFDPages_t *pages = p->pages;
 
+    if (migrate_zero_copy_send()) {
+        p->iovs_num = 0;
+    } else {
+        p->iovs_num = 1;
+    }
+
     for (int i = 0; i < p->normal_num; i++) {
         p->iov[p->iovs_num].iov_base = pages->block->host + p->normal[i];
         p->iov[p->iovs_num].iov_len = p->page_size;
