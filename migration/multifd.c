@@ -162,14 +162,25 @@ static MultiFDMethods multifd_nocomp_ops = {
     .recv_pages = nocomp_recv_pages
 };
 
-static MultiFDMethods *multifd_ops[MULTIFD_COMPRESSION__MAX] = {
-    [MULTIFD_COMPRESSION_NONE] = &multifd_nocomp_ops,
-};
+static MultiFDMethods *multifd_compression_ops[MULTIFD_COMPRESSION__MAX] = {0};
 
-void multifd_register_ops(int method, MultiFDMethods *ops)
+static MultiFDMethods *multifd_get_ops(void)
+{
+    MultiFDCompression comp = migrate_multifd_compression();
+
+    assert(comp < MULTIFD_COMPRESSION__MAX);
+
+    if (comp != MULTIFD_COMPRESSION_NONE) {
+        return multifd_compression_ops[comp];
+    }
+
+    return &multifd_nocomp_ops;
+}
+
+void multifd_register_compression(int method, MultiFDMethods *ops)
 {
     assert(0 < method && method < MULTIFD_COMPRESSION__MAX);
-    multifd_ops[method] = ops;
+    multifd_compression_ops[method] = ops;
 }
 
 static int multifd_send_initial_packet(MultiFDSendParams *p, Error **errp)
@@ -915,7 +926,7 @@ int multifd_save_setup(Error **errp)
     multifd_send_state->pages = multifd_pages_init(page_count);
     qemu_sem_init(&multifd_send_state->channels_ready, 0);
     qatomic_set(&multifd_send_state->exiting, 0);
-    multifd_send_state->ops = multifd_ops[migrate_multifd_compression()];
+    multifd_send_state->ops = multifd_get_ops();
 
     for (i = 0; i < thread_count; i++) {
         MultiFDSendParams *p = &multifd_send_state->params[i];
@@ -1171,7 +1182,7 @@ int multifd_load_setup(Error **errp)
     multifd_recv_state->params = g_new0(MultiFDRecvParams, thread_count);
     qatomic_set(&multifd_recv_state->count, 0);
     qemu_sem_init(&multifd_recv_state->sem_sync, 0);
-    multifd_recv_state->ops = multifd_ops[migrate_multifd_compression()];
+    multifd_recv_state->ops = multifd_get_ops();
 
     for (i = 0; i < thread_count; i++) {
         MultiFDRecvParams *p = &multifd_recv_state->params[i];
