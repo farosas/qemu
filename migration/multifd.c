@@ -11,7 +11,6 @@
  */
 
 #include "qemu/osdep.h"
-#include "qemu/iov.h"
 #include "qemu/rcu.h"
 #include "exec/target_page.h"
 #include "sysemu/sysemu.h"
@@ -550,7 +549,6 @@ static void *multifd_send_thread(void *opaque)
     MigrationThread *thread = NULL;
     Error *local_err = NULL;
     int ret = 0;
-    bool use_zero_copy_send = migrate_zero_copy_send();
 
     thread = migration_threads_add(p->name, qemu_get_thread_id());
 
@@ -605,19 +603,7 @@ static void *multifd_send_thread(void *opaque)
             trace_multifd_send(p->id, packet_num, p->normal_num, flags,
                                p->next_packet_size);
 
-            if (use_zero_copy_send) {
-                /* send header first, without zerocopy */
-                ret = qio_channel_writev(p->c, p->iov, 1, &local_err);
-                if (ret != 0) {
-                    break;
-                }
-
-                /* header sent, discard it */
-                iov_discard_front(&p->iov, &p->iovs_num, p->iov[0].iov_len);
-            }
-
-            ret = qio_channel_writev_full_all(p->c, p->iov, p->iovs_num, NULL,
-                                              0, p->write_flags, &local_err);
+            ret = multifd_send_state->ops->send(p, &local_err);
             if (ret != 0) {
                 break;
             }
