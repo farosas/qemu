@@ -64,7 +64,11 @@ static MultiFDMethods *multifd_get_ops(void)
         return multifd_compression_ops[comp];
     }
 
-    return &multifd_socket_ops;
+    if (migrate_fixed_ram()) {
+        return &multifd_file_ops;
+    } else {
+        return &multifd_socket_ops;
+    }
 }
 
 void multifd_register_compression(int method, MultiFDMethods *ops)

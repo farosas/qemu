@@ -149,3 +149,47 @@ void file_start_incoming_migration(FileMigrationArgs *file_args, Error **errp)
         error_setg(errp, "Error creating migration incoming channel");
     }
 }
+
+static int multifd_file_send_setup(MultiFDSendParams *p, Error **errp)
+{
+    return 0;
+}
+
+static void multifd_file_send_cleanup(MultiFDSendParams *p, Error **errp)
+{
+    return;
+}
+
+static int multifd_file_send_prepare(MultiFDSendParams *p, Error **errp)
+{
+    return 0;
+}
+
+static int multifd_file_send(MultiFDSendParams *p, Error **errp)
+{
+    return 0;
+}
+
+static int multifd_file_recv_setup(MultiFDRecvParams *p, Error **errp)
+{
+    return 0;
+}
+
+static void multifd_file_recv_cleanup(MultiFDRecvParams *p)
+{
+}
+
+static int multifd_file_recv(MultiFDRecvParams *p, Error **errp)
+{
+    return 0;
+}
+
+MultiFDMethods multifd_file_ops = {
+    .send_setup = multifd_file_send_setup,
+    .send_cleanup = multifd_file_send_cleanup,
+    .send_prepare = multifd_file_send_prepare,
+    .send = multifd_file_send,
+    .recv_setup = multifd_file_recv_setup,
+    .recv_cleanup = multifd_file_recv_cleanup,
+    .recv = multifd_file_recv
+};
