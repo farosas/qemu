@@ -377,6 +377,11 @@ struct {
     MultiFDMethods *ops;
 } *multifd_send_state;
 
+static bool multifd_send_should_exit(void)
+{
+    return qatomic_read(&multifd_send_state->exiting);
+}
+
 /*
  * The migration thread can wait on either of the two semaphores.  This
  * function can be used to kick the main thread out of waiting on either of
@@ -414,7 +419,7 @@ static int multifd_send_pages(void)
     MultiFDSendParams *p = NULL; /* make happy gcc */
     MultiFDPages_t *pages = multifd_send_state->pages;
 
-    if (qatomic_read(&multifd_send_state->exiting)) {
+    if (multifd_send_should_exit()) {
         return -1;
     }
 
@@ -426,14 +431,11 @@ static int multifd_send_pages(void)
      */
     next_channel %= migrate_multifd_channels();
     for (i = next_channel;; i = (i + 1) % migrate_multifd_channels()) {
-        p = &multifd_send_state->params[i];
-
-        qemu_mutex_lock(&p->mutex);
-        if (p->quit) {
-            error_report("%s: channel %d has already quit!", __func__, i);
-            qemu_mutex_unlock(&p->mutex);
+        if (multifd_send_should_exit()) {
             return -1;
         }
+        p = &multifd_send_state->params[i];
+        qemu_mutex_lock(&p->mutex);
         if (!p->pending_job) {
             p->pending_job++;
             next_channel = (i + 1) % migrate_multifd_channels();
@@ -488,6 +490,16 @@ static void multifd_send_terminate_threads(Error *err)
 {
     int i;
 
+    /*
+     * We don't want to exit each threads twice.  Depending on where
+     * we get the error, or if there are two independent errors in two
+     * threads at the same time, we can end calling this function
+     * twice.
+     */
+    if (qatomic_xchg(&multifd_send_state->exiting, 1)) {
+        return;
+    }
+
     trace_multifd_send_terminate_threads(err != NULL);
 
     if (err) {
@@ -502,26 +514,13 @@ static void multifd_send_terminate_threads(Error *err)
         }
     }
 
-    /*
-     * We don't want to exit each threads twice.  Depending on where
-     * we get the error, or if there are two independent errors in two
-     * threads at the same time, we can end calling this function
-     * twice.
-     */
-    if (qatomic_xchg(&multifd_send_state->exiting, 1)) {
-        return;
-    }
-
     for (i = 0; i < migrate_multifd_channels(); i++) {
         MultiFDSendParams *p = &multifd_send_state->params[i];
 
-        qemu_mutex_lock(&p->mutex);
-        p->quit = true;
         qemu_sem_post(&p->sem);
         if (p->c) {
             qio_channel_shutdown(p->c, QIO_CHANNEL_SHUTDOWN_BOTH, NULL);
         }
-        qemu_mutex_unlock(&p->mutex);
     }
 }
 
@@ -625,16 +624,13 @@ int multifd_send_sync_main(void)
     for (i = 0; i < migrate_multifd_channels(); i++) {
         MultiFDSendParams *p = &multifd_send_state->params[i];
 
-        trace_multifd_send_sync_main_signal(p->id);
-
-        qemu_mutex_lock(&p->mutex);
-
-        if (p->quit) {
-            error_report("%s: channel %d has already quit", __func__, i);
-            qemu_mutex_unlock(&p->mutex);
+        if (multifd_send_should_exit()) {
             return -1;
         }
 
+        trace_multifd_send_sync_main_signal(p->id);
+
+        qemu_mutex_lock(&p->mutex);
         p->packet_num = multifd_send_state->packet_num++;
         p->flags |= MULTIFD_FLAG_SYNC;
         p->pending_job++;
@@ -643,6 +639,10 @@ int multifd_send_sync_main(void)
     }
     for (i = 0; i < migrate_multifd_channels(); i++) {
         MultiFDSendParams *p = &multifd_send_state->params[i];
+
+        if (multifd_send_should_exit()) {
+            return -1;
+        }
 
         qemu_sem_wait(&multifd_send_state->channels_ready);
         trace_multifd_send_sync_main_wait(p->id);
@@ -681,7 +681,7 @@ static void *multifd_send_thread(void *opaque)
         qemu_sem_post(&multifd_send_state->channels_ready);
         qemu_sem_wait(&p->sem);
 
-        if (qatomic_read(&multifd_send_state->exiting)) {
+        if (multifd_send_should_exit()) {
             break;
         }
         qemu_mutex_lock(&p->mutex);
@@ -926,7 +926,6 @@ bool multifd_save_setup(void)
         qemu_mutex_init(&p->mutex);
         qemu_sem_init(&p->sem, 0);
         qemu_sem_init(&p->sem_sync, 0);
-        p->quit = false;
         p->pending_job = 0;
         p->id = i;
         p->pages = multifd_pages_init(page_count);

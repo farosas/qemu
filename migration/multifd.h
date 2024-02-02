@@ -96,8 +96,6 @@ typedef struct {
 
     /* this mutex protects the following parameters */
     QemuMutex mutex;
-    /* should this thread finish */
-    bool quit;
     /* multifd flags for each packet */
     uint32_t flags;
     /* global number of generated multifd packets */
