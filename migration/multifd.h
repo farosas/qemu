@@ -94,8 +94,6 @@ typedef struct {
     /* syncs main thread and channels */
     QemuSemaphore sem_sync;
 
-    /* this mutex protects the following parameters */
-    QemuMutex mutex;
     /* multifd flags for each packet */
     uint32_t flags;
     /*
