@@ -471,6 +471,15 @@ static void multifd_send_kick_main(MultiFDSendParams *p)
 }
 
 /*
+ * If the recv thread has errored out the migration thread will be
+ * left waiting on this semaphore. Kick it out of the wait.
+ */
+static void multifd_recv_kick_main(void)
+{
+    qemu_sem_post(&multifd_recv_state->sem_sync);
+}
+
+/*
  * How we use multifd_send_state->pages and channel->pages?
  *
  * We create a pages for each channel, and a main one.  Each time that
@@ -1264,6 +1273,7 @@ static void *multifd_recv_thread(void *opaque)
     }
 
     if (local_err) {
+        multifd_recv_kick_main();
         multifd_recv_terminate_threads(local_err);
         error_free(local_err);
     }
