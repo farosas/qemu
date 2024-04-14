@@ -259,6 +259,9 @@ void migration_object_init(void)
 
     current_incoming->exit_on_error = INMIGRATE_DEFAULT_EXIT_ON_ERROR;
 
+    qemu_mutex_init(&current_incoming->load_finish_ready_mutex);
+    qemu_cond_init(&current_incoming->load_finish_ready_cond);
+
     migration_object_check(current_migration, &error_fatal);
 
     ram_mig_init();
@@ -409,6 +412,9 @@ void migration_incoming_state_destroy(void)
         qemu_fclose(mis->postcopy_qemufile_dst);
         mis->postcopy_qemufile_dst = NULL;
     }
+
+    qemu_mutex_destroy(&mis->load_finish_ready_mutex);
+    qemu_cond_destroy(&mis->load_finish_ready_cond);
 
     yank_unregister_instance(MIGRATION_YANK_INSTANCE);
 }
