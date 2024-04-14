@@ -230,6 +230,9 @@ struct MigrationIncomingState {
 
     /* Do exit on incoming migration failure */
     bool exit_on_error;
+
+    QemuCond load_finish_ready_cond;
+    QemuMutex load_finish_ready_mutex;
 };
 
 MigrationIncomingState *migration_incoming_get_current(void);
