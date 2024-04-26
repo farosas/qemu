@@ -204,21 +204,33 @@ static gboolean file_accept_incoming_migration(QIOChannel *ioc,
     return G_SOURCE_REMOVE;
 }
 
-void file_create_incoming_channels(QIOChannel *ioc, Error **errp)
+static void file_create_incoming_channels(QIOChannel *ioc, char *filename,
+                                          Error **errp)
 {
-    int i, fd, channels = 1;
+    int i, channels = 1;
     g_autofree QIOChannel **iocs = NULL;
+    int flags = O_RDONLY;
 
     if (migrate_multifd()) {
         channels += migrate_multifd_channels();
+
+        if (migrate_direct_io()) {
+#ifdef O_DIRECT
+            flags |= O_DIRECT;
+#else
+            error_setg(errp, "System does not support O_DIRECT");
+            error_append_hint(errp,
+                              "Try disabling direct-io migration capability\n");
+            return;
+#endif
+        }
     }
 
     iocs = g_new0(QIOChannel *, channels);
-    fd = QIO_CHANNEL_FILE(ioc)->fd;
     iocs[0] = ioc;
 
     for (i = 1; i < channels; i++) {
-        QIOChannelFile *fioc = qio_channel_file_new_dupfd(fd, errp);
+        QIOChannelFile *fioc = qio_channel_file_new_path(filename, flags, 0, errp);
 
         if (!fioc) {
             while (i) {
@@ -245,8 +257,13 @@ void file_start_incoming_migration(FileMigrationArgs *file_args, Error **errp)
     QIOChannelFile *fioc = NULL;
     uint64_t offset = file_args->offset;
     int flags = O_RDONLY;
+    int64_t fdset_id;
 
     trace_migration_file_incoming(filename);
+
+    if (!file_parse_fdset(filename, &fdset_id, errp)) {
+        return;
+    }
 
     fioc = qio_channel_file_new_path(filename, flags, 0, errp);
     if (!fioc) {
@@ -259,7 +276,7 @@ void file_start_incoming_migration(FileMigrationArgs *file_args, Error **errp)
         return;
     }
 
-    file_create_incoming_channels(QIO_CHANNEL(fioc), errp);
+    file_create_incoming_channels(QIO_CHANNEL(fioc), filename, errp);
 }
 
 int file_write_ramblock_iov(QIOChannel *ioc, const struct iovec *iov,

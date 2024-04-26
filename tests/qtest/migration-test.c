@@ -2357,7 +2357,7 @@ static void migrate_multifd_mapped_ram_fdset_dio_end(QTestState *from,
 static void *migrate_multifd_mapped_ram_fdset(QTestState *from, QTestState *to)
 {
     g_autofree char *file = g_strdup_printf("%s/%s", tmpfs, FILE_TEST_FILENAME);
-    int fds[3];
+    int fds[4];
     int src_flags = O_WRONLY;
 
     file_dirty_offset_region();
@@ -2385,6 +2385,15 @@ static void *migrate_multifd_mapped_ram_fdset(QTestState *from, QTestState *to)
 
     qtest_qmp_fds_assert_success(to, &fds[2], 1, "{'execute': 'add-fd', "
                                  "'arguments': {'fdset-id': 1}}");
+
+    /* secondary incoming channels */
+    fds[3] = open(file, O_CREAT | O_RDONLY | O_DIRECT, 0660);
+    assert(fds[3] != -1);
+
+    qtest_qmp_fds_assert_success(to, &fds[3], 1, "{'execute': 'add-fd', "
+                                 "'arguments': {'fdset-id': 1}}");
+
+
 
     migrate_multifd_mapped_ram_dio_start(from, to);
 #else
