@@ -732,6 +732,7 @@ static int test_migrate_start(QTestState **from, QTestState **to,
     const char *memory_size;
     const char *machine_alias, *machine_opts = "";
     g_autofree char *machine = NULL;
+    g_autofree gchar *device_opts = NULL;
 
     if (args->use_shmem) {
         if (!g_file_test("/dev/shm", G_FILE_TEST_IS_DIR)) {
@@ -818,12 +819,14 @@ static int test_migrate_start(QTestState **from, QTestState **to,
 
     g_test_message("Using machine type: %s", machine);
 
+    device_opts = g_strdup(getenv("QTEST_DEVICE_OPTS"));
+
     cmd_source = g_strdup_printf("-accel kvm%s -accel tcg "
                                  "-machine %s,%s "
                                  "-name source,debug-threads=on "
                                  "-m %s "
                                  "-serial file:%s/src_serial "
-                                 "%s %s %s %s %s",
+                                 "%s %s %s %s %s %s",
                                  kvm_opts ? kvm_opts : "",
                                  machine, machine_opts,
                                  memory_size, tmpfs,
@@ -831,6 +834,7 @@ static int test_migrate_start(QTestState **from, QTestState **to,
                                  arch_source ? arch_source : "",
                                  shmem_opts ? shmem_opts : "",
                                  args->opts_source ? args->opts_source : "",
+                                 device_opts ? device_opts : "",
                                  ignore_stderr);
     if (!args->only_target) {
         *from = qtest_init_with_env(QEMU_ENV_SRC, cmd_source);
@@ -845,7 +849,7 @@ static int test_migrate_start(QTestState **from, QTestState **to,
                                  "-m %s "
                                  "-serial file:%s/dest_serial "
                                  "-incoming %s "
-                                 "%s %s %s %s %s",
+                                 "%s %s %s %s %s %s",
                                  kvm_opts ? kvm_opts : "",
                                  machine, machine_opts,
                                  memory_size, tmpfs, uri,
@@ -853,6 +857,7 @@ static int test_migrate_start(QTestState **from, QTestState **to,
                                  arch_target ? arch_target : "",
                                  shmem_opts ? shmem_opts : "",
                                  args->opts_target ? args->opts_target : "",
+                                 device_opts ? device_opts : "",
                                  ignore_stderr);
     *to = qtest_init_with_env(QEMU_ENV_DST, cmd_target);
     qtest_qmp_set_event_callback(*to,
