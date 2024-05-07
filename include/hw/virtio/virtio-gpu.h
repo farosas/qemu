@@ -177,6 +177,7 @@ typedef struct VGPUDMABuf {
 struct VirtIOGPU {
     VirtIOGPUBase parent_obj;
 
+    uint8_t vmstate_version;
     uint64_t conf_max_hostmem;
 
     VirtQueue *ctrl_vq;

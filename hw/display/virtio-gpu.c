@@ -1246,7 +1246,8 @@ static int virtio_gpu_save(QEMUFile *f, void *opaque, size_t size,
     }
     qemu_put_be32(f, 0); /* end of list */
 
-    return vmstate_save_state(f, &vmstate_virtio_gpu_scanouts, g, NULL);
+    return vmstate_save_state_v(f, &vmstate_virtio_gpu_scanouts, g,
+                                NULL, g->vmstate_version, NULL);
 }
 
 static bool virtio_gpu_load_restore_mapping(VirtIOGPU *g,
@@ -1351,7 +1352,7 @@ static int virtio_gpu_load(QEMUFile *f, void *opaque, size_t size,
     }
 
     /* load & apply scanout state */
-    vmstate_load_state(f, &vmstate_virtio_gpu_scanouts, g, 1);
+    vmstate_load_state(f, &vmstate_virtio_gpu_scanouts, g, g->vmstate_version);
 
     return 0;
 }
@@ -1671,6 +1672,7 @@ static Property virtio_gpu_properties[] = {
     DEFINE_PROP_BIT("blob", VirtIOGPU, parent_obj.conf.flags,
                     VIRTIO_GPU_FLAG_BLOB_ENABLED, false),
     DEFINE_PROP_SIZE("hostmem", VirtIOGPU, parent_obj.conf.hostmem, 0),
+    DEFINE_PROP_UINT8("x-vmstate-version", VirtIOGPU, vmstate_version, 2),
     DEFINE_PROP_END_OF_LIST(),
 };
 
