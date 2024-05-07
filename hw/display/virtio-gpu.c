@@ -1191,17 +1191,29 @@ static const VMStateDescription vmstate_virtio_gpu_scanout = {
     },
 };
 
+static bool vmstate_before_v2(void *opaque, int version)
+{
+    return version <= 1;
+}
+
 static const VMStateDescription vmstate_virtio_gpu_scanouts = {
     .name = "virtio-gpu-scanouts",
-    .version_id = 1,
+    .version_id = 2,
+    .minimum_version_id = 1,
     .fields = (const VMStateField[]) {
         VMSTATE_INT32(parent_obj.enable, struct VirtIOGPU),
         VMSTATE_UINT32_EQUAL(parent_obj.conf.max_outputs,
                              struct VirtIOGPU, NULL),
-        VMSTATE_STRUCT_VARRAY_UINT32(parent_obj.scanout, struct VirtIOGPU,
-                                     parent_obj.conf.max_outputs, 1,
-                                     vmstate_virtio_gpu_scanout,
-                                     struct virtio_gpu_scanout),
+        VMSTATE_VSTRUCT_TEST_VARRAY_UINT32(parent_obj.scanout, struct VirtIOGPU,
+                                           vmstate_before_v2,
+                                           parent_obj.conf.max_outputs, 1,
+                                           vmstate_virtio_gpu_scanout,
+                                           struct virtio_gpu_scanout, 1),
+        VMSTATE_VSTRUCT_TEST_VARRAY_UINT32(parent_obj.scanout, struct VirtIOGPU,
+                                           NULL,
+                                           parent_obj.conf.max_outputs, 2,
+                                           vmstate_virtio_gpu_scanout,
+                                           struct virtio_gpu_scanout, 2),
         VMSTATE_END_OF_LIST()
     },
 };
